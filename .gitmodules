@@ -1,0 +1,3 @@
+[submodule "sengine"]
+	path = sengine
+	url = https://github.com/selibs/sengine
