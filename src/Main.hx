@@ -8,7 +8,7 @@ import s2d.elements.Text;
 class Main {
 	public static function main() {
 		App.start({
-			title: "Untitled",
+			title: "Mutts",
 			width: 1920,
 			height: 1080
 		}, setup);
