@@ -1,13 +1,12 @@
 package;
 
-import se.App;
-import se.Window;
+import se.system.Window;
 import s2d.WindowScene;
 import s2d.elements.Text;
 
 class Main {
 	public static function main() {
-		App.start({
+		se.App.start({
 			title: "Mutts",
 			width: 1920,
 			height: 1080
@@ -15,6 +14,7 @@ class Main {
 	}
 
 	static function setup(window:Window) {
+		var playground = new mutts.ui.playground.Playground();
 		var scene = new WindowScene(window);
 		scene.active = true;
 		scene.padding = 50;
