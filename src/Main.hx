@@ -21,41 +21,15 @@ class Main implements s2d.Markup {
 		markup(scene);
 	}
 
-	// global style that can be referenced
-
-	@:ui.style
-	static function style() {}
-
 	@:ui.markup
 	static function markup() {
-		// inline style that applies instantly on the parent
-		@style {
-			var __s0 = (e:s2d.widgets.ImageWidget) -> {
-				// функция, которая применяется к отобранным элементам
-				function apply(r:Rectangle) {
-					r.color = Red;
-				}
-				// моментальное применение
-				for (c in e.select(Children(ByType(Rectangle))))
-					apply(cast c);
-				// отслеживание
-				e.onChildAdded(c -> if (c.matches(ByType(Rectangle))) apply(cast c));
-			}
-
-			@rule(image > rectangle) {
-				color = red;
-			}
-
-			@rule(!hovered, -0) {
-				color = Black;
-				anchors.margins = 50;
-				anchors.fill = @args [parent];
-			}
-		}
-
-		@rectangle.rounded(20) {
+		var a = @rectangle.rounded(20, {
+			color: Black,
+            clip: true,
+			"anchors.fill": @args[parent],
+		}) {
 			@text("Hello, World!", {
-				"color": White,
+				"color": Red,
 				"alignment": AlignCenter,
 				"anchors.margins": 50,
 				"anchors.fill": @args[parent],
