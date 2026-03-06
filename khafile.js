@@ -10,6 +10,10 @@ project.localLibraryPath = "libs";
 project.addDefine("log");
 project.addLibrary("snet");
 
+process.shortcuts = {
+    "ground": "mutts.ui.Playground.Ground"
+}
+
 await project.addProject("sengine");
 
 resolve(project);
