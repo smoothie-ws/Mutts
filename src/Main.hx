@@ -2,6 +2,7 @@ package;
 
 import se.system.Window;
 import s2d.WindowScene;
+import s2d.Element;
 import s2d.elements.Text;
 import s2d.elements.shapes.Rectangle;
 
@@ -21,20 +22,29 @@ class Main implements s2d.Markup {
 		markup(scene);
 	}
 
+	@:ui.style
+	static var style = {
+		@all {
+			anchors.fill = @args [parent];
+			anchors.margins = 50;
+		}
+		@text {
+			color = Red;
+			alignment = AlignCenter;
+			fontSize = 64;
+		}
+		@rectangle.rounded {
+			color = Black;
+			clip = true;
+		}
+	}
+
 	@:ui.markup
 	static function markup() {
-		var a = @rectangle.rounded(20, {
-			color: Black,
-            clip: true,
-			"anchors.fill": @args[parent],
-		}) {
-			@text("Hello, World!", {
-				"color": Red,
-				"alignment": AlignCenter,
-				"anchors.margins": 50,
-				"anchors.fill": @args[parent],
-				"fontSize": 64
-			}) {};
+		@use style;
+
+		var a = @rectangle.rounded(20) {
+			@text("Hello, World!") {};
 		}
 	}
 }
