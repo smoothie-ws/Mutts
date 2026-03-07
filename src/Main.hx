@@ -23,8 +23,8 @@ class Main implements s2d.Markup {
 	}
 
 	@:ui.style
-	static var style = {
-		@all {
+	static function style() {
+		@rule(a | b) {
 			anchors.fill = @args [parent];
 			anchors.margins = 50;
 		}
@@ -41,7 +41,7 @@ class Main implements s2d.Markup {
 
 	@:ui.markup
 	static function markup() {
-		@use style;
+		// @use style;
 
 		var a = @rectangle.rounded(20) {
 			@text("Hello, World!") {};
