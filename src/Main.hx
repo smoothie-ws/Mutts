@@ -1,5 +1,7 @@
 package;
 
+import se.App;
+import se.system.input.Mouse;
 import se.system.Window;
 import s2d.WindowScene;
 import s2d.Element;
@@ -25,20 +27,19 @@ class Main implements s2d.Markup {
 	@:ui.style
 	static function style() {
 		@element {
-			// anchors.fill = @args [parent];
-			// anchors.margins = 50;
-		}
-
-		@text {
-			color = Red;
-			alignment = AlignCenter;
-			fontSize = 64;
+			$anchors.fill($parent);
+			$anchors.margins = 50;
 		}
 
 		@rectangle.rounded {
-			color = Black;
-			clip = true;
-			anchors.margins = 50;
+			$color = Black;
+			$clip = true;
+
+			@text {
+				$color = Red;
+				$alignment = AlignCenter;
+				$fontSize = 64;
+			}
 		}
 	}
 
@@ -46,8 +47,13 @@ class Main implements s2d.Markup {
 	static function markup() {
 		@use style;
 
-		var a = @rectangle.rounded(20) {
-			@text("Hello, World!") {};
+		var a = @positioner {
+			App.input.mouse.onScrolled(d -> {
+				if (d > 0)
+					a.addChild(new Text(Std.string(d)));
+				else 
+					a.children.pop();
+			});
 		}
 	}
 }
