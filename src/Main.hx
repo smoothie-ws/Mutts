@@ -31,12 +31,16 @@ class Main implements s2d.Markup {
 			$anchors.margins = 50;
 		}
 
+		@drawable([color]) {
+			$color = Red;
+		}
+
 		@rectangle.rounded {
 			$color = Black;
 			$clip = true;
 
 			@text {
-				$color = Red;
+				// $color = Red;
 				$alignment = AlignCenter;
 				$fontSize = 64;
 			}
@@ -47,13 +51,8 @@ class Main implements s2d.Markup {
 	static function markup() {
 		@use style;
 
-		var a = @positioner {
-			App.input.mouse.onScrolled(d -> {
-				if (d > 0)
-					a.addChild(new Text(Std.string(d)));
-				else 
-					a.children.pop();
-			});
+		@rectangle.rounded {
+			@text("Hello, world!") {}
 		}
 	}
 }
