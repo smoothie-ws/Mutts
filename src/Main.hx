@@ -1,5 +1,9 @@
 package;
 
+import se.animation.Easing;
+import se.animation.NumberAnimation;
+import se.animation.Animation;
+import se.animation.Action;
 import se.App;
 import se.system.input.Mouse;
 import se.system.Window;
@@ -17,11 +21,10 @@ class Main implements s2d.Markup {
 		}, setup);
 	}
 
-	static function setup(window:Window) {
+	static function setup(window) {
 		var scene = new WindowScene(window);
-		scene.active = true;
-		scene.padding = 50;
-		markup(scene);
+		scene.root.padding = 50;
+		markup(scene.root);
 	}
 
 	@:ui.style
@@ -51,7 +54,7 @@ class Main implements s2d.Markup {
 	static function markup() {
 		@use style;
 
-		@rectangle.rounded {
+		var rect = @rectangle.rounded {
 			@text("Hello, world!") {}
 		}
 	}
