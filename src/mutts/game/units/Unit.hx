@@ -1,9 +1,9 @@
 package mutts.game.units;
 
 abstract class Unit {
-	@:signal function spawned();
+	@:signal public function spawned();
 
-	@:signal function killed();
+	@:signal public function killed();
 
 	public function new() {}
 }
