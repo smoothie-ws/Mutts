@@ -1,5 +1,6 @@
 package;
 
+import se.animation.NumberAnimation;
 import se.App;
 import se.Timer;
 import se.math.SMath;
@@ -36,7 +37,7 @@ class Main extends se.App implements s2d.Markup {
 			$anchors.fill($parent);
 			$anchors.margins = 50;
 
-			new Timer(() -> $rotate(radians(1), vec2(375, 250)), 0.01).loop();
+			new Timer(() -> $transform.rotate(radians(1), vec2(375, 250)), 0.01).loop();
 
 			@text("Hello, world!") {
 				$anchors.fill($parent);
@@ -52,9 +53,9 @@ class Main extends se.App implements s2d.Markup {
 				$onHoveredDirty(h -> {
 					se.App.input.mouse.cursor = h ? Pointer : Default;
 					if (h)
-						rect.upscale(1.2, vec2(375, 250));
+						new NumberAnimation(rect.transform.scale.x, 1.2, 0.5, c -> rect.transform.scale = c).ease(Easing.OutQuart).start();
 					else
-						rect.upscale(1 / 1.2, vec2(375, 250));
+						new NumberAnimation(rect.transform.scale.x, 1.0, 0.5, c -> rect.transform.scale = c).ease(Easing.OutQuart).start();
 				});
 			}
 		}
