@@ -40,17 +40,17 @@ class Main extends se.App implements s2d.Markup {
 
 				@rectangle {
 					$margins = 50;
+					$width = 100;
 					$anchors.top = $parent.top;
 					$anchors.left = $parent.left;
 					$anchors.bottom = $parent.bottom;
-					$anchors.right = $parent.hCenter;
 					$color = Green;
 				}
 
 				@rectangle {
 					$margins = 50;
+					$width = 100;
 					$anchors.top = $parent.top;
-					$anchors.left = $parent.hCenter;
 					$anchors.bottom = $parent.bottom;
 					$anchors.right = $parent.right;
 					$color = Green;
