@@ -28,35 +28,34 @@ class Main extends se.App implements s2d.Markup {
 	static function markup() {
 		@use style;
 
-		$tag = "root";
-
 		var rect = @rectangle {
-            $anchors.fill(parent);
-            $color = Black;
+			$anchors.fill($parent);
+			$color = Black;
 			$tag = "rectangle";
+			$padding = 50;
 
-			// new Timer(() -> $transform.rotate(radians(1), vec2(375, 250)), 0.01).loop();
+			@rectangle {
+				$anchors.fill($parent);
+				$color = Red;
 
-			// @text("Hello, world!") {
-			// 	$anchors.fill($parent);
-			// 	$tag = "text";
-			// 	$color = Black;
-			// }
+				@rectangle {
+					$margins = 50;
+					$anchors.top = $parent.top;
+					$anchors.left = $parent.left;
+					$anchors.bottom = $parent.bottom;
+					$anchors.right = $parent.hCenter;
+					$color = Green;
+				}
 
-			// @interactive {
-			// 	$anchors.fill($parent);
-
-			// 	var anim = new ColorAnimation(0.5, c -> rect.color = c).ease(Easing.OutQuart);
-			// 	$onMouseEntered((x, y) -> {
-			// 		anim.stop();
-			// 		anim.start(rect.color, Green);
-			// 	});
-			// 	$onMouseExited((x, y) -> {
-			// 		anim.stop();
-			// 		anim.start(rect.color, Red);
-			// 	});
-			// 	$onHoveredDirty(h -> se.App.input.mouse.cursor = h ? Pointer : Default);
-			// }
+				@rectangle {
+					$margins = 50;
+					$anchors.top = $parent.top;
+					$anchors.left = $parent.hCenter;
+					$anchors.bottom = $parent.bottom;
+					$anchors.right = $parent.right;
+					$color = Green;
+				}
+			}
 		}
 	}
 }
