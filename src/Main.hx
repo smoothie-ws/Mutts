@@ -1,16 +1,16 @@
 package;
 
-import se.App;
-import se.Timer;
-import se.math.SMath;
-import se.animation.Easing;
-import se.animation.ColorAnimation;
-import s2d.WindowScene;
+import s.system.App;
+import s.system.Timer;
+import s.system.math.SMath;
+import s.system.animation.Easing;
+import s.system.animation.ColorAnimation;
+import s.markup.WindowScene;
 
 @:app.title("Mutts")
 @:app.window(width = 750, height = 500)
 @:app.framebuffer(samplesPerPixel = 4)
-class Main extends se.App implements s2d.Markup {
+class Main extends s.system.App implements s.markup.Markup {
 	public static function main() {
 		var scene = new WindowScene(window);
 		scene.root.padding = 50;
