@@ -38,7 +38,7 @@ class Main extends s.system.App implements s.markup.Markup {
 				$anchors.fill($parent);
 				$color = Red;
 
-				@rectangle {
+				var r = @rectangle {
 					$margins = 50;
 					$width = 100;
 					$anchors.top = $parent.top;
@@ -49,11 +49,27 @@ class Main extends s.system.App implements s.markup.Markup {
 
 				@rectangle {
 					$margins = 50;
+					$padding = 50;
 					$width = 100;
 					$anchors.top = $parent.top;
 					$anchors.bottom = $parent.bottom;
+					$anchors.left = r.right;
 					$anchors.right = $parent.right;
 					$color = Green;
+
+					@rectangle {
+						$width = "25vw";
+						$height = "25vh";
+						$anchors.fill($parent);
+						$color = Blue;
+
+						@rectangle {
+							$width = "50%";
+							$height = "50%";
+							$color = Yellow;
+							$anchors.centerIn($parent);
+						}
+					}
 				}
 			}
 		}
