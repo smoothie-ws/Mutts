@@ -17,6 +17,9 @@ class Main extends s.system.App implements s.markup.Markup {
 		var scene = new WindowScene(window);
 		scene.root.padding = 50;
 		markup(scene.root);
+
+		var a = new StringBuf();
+		var b = new StringBuf();
 	}
 
 	@:ui.style
@@ -65,11 +68,12 @@ class Main extends s.system.App implements s.markup.Markup {
 						$anchors.fill($parent);
 						$color = Blue;
 
-						@text("Hello, world! smoothie") {
+						@text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.") {
 							$width = "50%";
 							$height = "50%";
 							$color = Yellow;
 							$fontSize = 32;
+							$elideMode = Left;
                             $wrapMode = Anywhere;
 							$alignment = AlignCenter;
 							$anchors.centerIn($parent);
