@@ -1,5 +1,7 @@
 package;
 
+import s.markup.Alignment;
+import s.markup.elements.Text;
 import s.system.App;
 import s.system.Timer;
 import s.system.math.SMath;
@@ -63,14 +65,25 @@ class Main extends s.system.App implements s.markup.Markup {
 						$anchors.fill($parent);
 						$color = Blue;
 
-						@text("Hello,\nworld!") {
+						@text("Hello, world! smoothie") {
 							$width = "50%";
 							$height = "50%";
 							$color = Yellow;
+							$fontSize = 32;
+                            $wrapMode = Anywhere;
 							$alignment = AlignCenter;
 							$anchors.centerIn($parent);
 
-							App.input.mouse.onScrolled(d -> $fontSize += d);
+							App.input.mouse.onButtonPressed(Left, (x, y) -> {
+								if ($alignment & AlignLeft != 0)
+									$alignment = AlignHCenter;
+								else if ($alignment & AlignHCenter != 0)
+									$alignment = AlignRight;
+								else
+									$alignment = AlignLeft;
+								$alignment = $alignment | AlignVCenter;
+							});
+							App.input.mouse.onScrolled(d -> $lineHeight += d);
 						}
 					}
 				}
