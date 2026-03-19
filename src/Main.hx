@@ -9,7 +9,7 @@ import s.markup.WindowScene;
 
 @:app.title("Mutts")
 @:app.window(width = 750, height = 500)
-@:app.framebuffer(samplesPerPixel = 4)
+@:app.framebuffer(samplesPerPixel = 4, verticalSync = false)
 class Main extends s.system.App implements s.markup.Markup {
 	public static function main() {
 		var scene = new WindowScene(window);
@@ -63,11 +63,14 @@ class Main extends s.system.App implements s.markup.Markup {
 						$anchors.fill($parent);
 						$color = Blue;
 
-						@rectangle {
+						@text("Hello,\nworld!") {
 							$width = "50%";
 							$height = "50%";
 							$color = Yellow;
+							$alignment = AlignCenter;
 							$anchors.centerIn($parent);
+
+							App.input.mouse.onScrolled(d -> $fontSize += d);
 						}
 					}
 				}
