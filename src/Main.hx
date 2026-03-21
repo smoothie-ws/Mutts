@@ -2,24 +2,21 @@ package;
 
 import s.markup.Alignment;
 import s.markup.elements.Text;
-import s.system.App;
-import s.system.Timer;
-import s.system.math.SMath;
-import s.system.animation.Easing;
-import s.system.animation.ColorAnimation;
+import s.App;
+import s.Timer;
+import s.math.SMath;
+import s.Interpolation;
+import s.animation.ColorAnimation;
 import s.markup.WindowScene;
 
 @:app.title("Mutts")
 @:app.window(width = 750, height = 500)
 @:app.framebuffer(samplesPerPixel = 4, verticalSync = false)
-class Main extends s.system.App implements s.markup.Markup {
+class Main extends s.App implements s.markup.Markup {
 	public static function main() {
 		var scene = new WindowScene(window);
 		scene.root.padding = 50;
 		markup(scene.root);
-
-		var a = new StringBuf();
-		var b = new StringBuf();
 	}
 
 	@:ui.style
@@ -50,6 +47,22 @@ class Main extends s.system.App implements s.markup.Markup {
 					$anchors.left = $parent.left;
 					$anchors.bottom = $parent.bottom;
 					$color = Green;
+
+					@circle(50) {
+						$border.width = 5;
+						$border.color = Blue;
+						$color = Black;
+						$center.y = "25%";
+						$anchors.fill($parent);
+					}
+
+					@ellipse(30) {
+						$anchors.fill($parent);
+						$color = Black;
+						$center.y = "75%";
+						$scaleX = 2.0;
+						$scaleY = 1.0;
+					}
 				}
 
 				@rectangle {
@@ -60,21 +73,34 @@ class Main extends s.system.App implements s.markup.Markup {
 					$anchors.bottom = $parent.bottom;
 					$anchors.left = r.right;
 					$anchors.right = $parent.right;
-					$color = Green;
+					$color = Black;
 
-					@rectangle {
-						$width = "25vw";
-						$height = "25vh";
+					var grad = @gradient.conic {
+						$stops = [{color: White, position: 0.0}, {color: Red, position: 0.5}, {color: Black, position: 1.0}];
+						$interpolation = Interpolation.OutCubic;
 						$anchors.fill($parent);
-						$color = Blue;
+						$padding = 50;
+						$width = 100;
+
+						App.input.mouse.onMoved((x, y, dx, dy) -> {
+							var p = grad.mapFromGlobal(x, y);
+							$start = {x: p.x, y: p.y};
+						});
+
+						@triangle(10) {
+							$border.width = 5;
+							$border.color = Blue;
+							$color = Yellow;
+							$anchors.fill($parent);
+						}
 
 						@text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.") {
 							$width = "50%";
 							$height = "50%";
-							$color = Yellow;
+							$color = Green;
 							$fontSize = 32;
-							$elideMode = Left;
-                            $wrapMode = Anywhere;
+							$elideMode = ElideLeft;
+							$wrapMode = WrapAnywhere;
 							$alignment = AlignCenter;
 							$anchors.centerIn($parent);
 
