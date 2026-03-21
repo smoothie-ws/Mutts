@@ -48,27 +48,15 @@ class Main extends s.App implements s.markup.Markup {
 					$anchors.bottom = $parent.bottom;
 					$color = Green;
 
-					@circle(50) {
-						$border.width = 5;
-						$border.color = Blue;
-						$color = Black;
-						$center.y = "25%";
-						$anchors.fill($parent);
-					}
-
 					@ellipse(30) {
 						$anchors.fill($parent);
 						$color = Black;
-						$center.y = "75%";
-						$scaleX = 2.0;
-						$scaleY = 1.0;
 					}
 				}
 
 				@rectangle {
 					$margins = 50;
 					$padding = 50;
-					$width = 100;
 					$anchors.top = $parent.top;
 					$anchors.bottom = $parent.bottom;
 					$anchors.left = r.right;
@@ -76,16 +64,17 @@ class Main extends s.App implements s.markup.Markup {
 					$color = Black;
 
 					var grad = @gradient.conic {
-						$stops = [{color: White, position: 0.0}, {color: Red, position: 0.5}, {color: Black, position: 1.0}];
-						$interpolation = Interpolation.OutCubic;
+						$stops = [
+							{color: White, position: 0.0},
+							{color: Red, position: 0.5},
+							{color: Black, position: 1.0}
+						];
+						$interpolation = Interpolation.OutQuart;
 						$anchors.fill($parent);
 						$padding = 50;
 						$width = 100;
 
-						App.input.mouse.onMoved((x, y, dx, dy) -> {
-							var p = grad.mapFromGlobal(x, y);
-							$start = {x: p.x, y: p.y};
-						});
+						App.input.mouse.onMoved((x, y, dx, dy) -> $start = grad.mapFromGlobalNormalized(x, y));
 
 						@triangle(10) {
 							$border.width = 5;
@@ -95,8 +84,8 @@ class Main extends s.App implements s.markup.Markup {
 						}
 
 						@text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.") {
-							$width = "50%";
-							$height = "50%";
+							$width = 250;
+							$height = 250;
 							$color = Green;
 							$fontSize = 32;
 							$elideMode = ElideLeft;
