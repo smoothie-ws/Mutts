@@ -63,13 +63,13 @@ class Main extends s.App implements s.markup.Markup {
 					$anchors.right = $parent.right;
 					$color = Black;
 
-					var grad = @gradient.conic {
+					var grad = @gradient.linear {
 						$stops = [
 							{color: White, position: 0.0},
 							{color: Red, position: 0.5},
 							{color: Black, position: 1.0}
 						];
-						$interpolation = Interpolation.OutQuart;
+						$interpolation = Interpolation.InQuart;
 						$anchors.fill($parent);
 						$padding = 50;
 						$width = 100;
@@ -83,26 +83,35 @@ class Main extends s.App implements s.markup.Markup {
 							$anchors.fill($parent);
 						}
 
-						@text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.") {
-							$width = 250;
-							$height = 250;
-							$color = Green;
-							$fontSize = 32;
-							$elideMode = ElideLeft;
-							$wrapMode = WrapAnywhere;
-							$alignment = AlignCenter;
-							$anchors.centerIn($parent);
+						@box {
+							$anchors.fill($parent);
 
-							App.input.mouse.onButtonPressed(Left, (x, y) -> {
-								if ($alignment & AlignLeft != 0)
-									$alignment = AlignHCenter;
-								else if ($alignment & AlignHCenter != 0)
-									$alignment = AlignRight;
-								else
-									$alignment = AlignLeft;
-								$alignment = $alignment | AlignVCenter;
-							});
-							App.input.mouse.onScrolled(d -> $lineHeight += d);
+							App.input.mouse.onScrolled(d -> $padding = $left.padding + d);
+
+							@text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.") {
+								$layout.fillWidth = true;
+								$layout.fillWidthFactor = 0.5;
+								$layout.fillHeight = true;
+								$layout.fillHeightFactor = 0.5;
+								$layout.alignment = AlignCenter;
+								$color = Green;
+								$fontSize = 32;
+								$elideMode = ElideLeft;
+								$wrapMode = WrapAnywhere;
+								$alignment = AlignBottom;
+
+								App.input.mouse.onButtonPressed(Left, (x, y) -> {
+									trace($displayText);
+									
+									if ($alignment & AlignLeft != 0)
+										$alignment = AlignHCenter;
+									else if ($alignment & AlignHCenter != 0)
+										$alignment = AlignRight;
+									else
+										$alignment = AlignLeft;
+									$alignment = $alignment | AlignBottom;
+								});
+							}
 						}
 					}
 				}

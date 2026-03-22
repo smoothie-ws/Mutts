@@ -9,7 +9,7 @@ project.addAssets("assets/**", {
 project.localLibraryPath = "libs";
 project.addDefine("log");
 project.addDefine("S2D_DEBUG_FPS");
-// project.addDefine("S2D_UI_DEBUG_ELEMENT_BOUNDS");
+project.addDefine("S2D_UI_DEBUG_ELEMENT_BOUNDS");
 project.addLibrary("snet");
 
 process.shortcuts = {
