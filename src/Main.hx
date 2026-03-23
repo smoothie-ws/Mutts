@@ -31,107 +31,116 @@ class Main extends s.App implements s.markup.Markup {
 		@use style;
 
 		var rect = @rectangle {
-			$anchors.fill($parent);
 			$color = Black;
-			$tag = "rectangle";
-			$padding = 50;
-
-			// @rectangle {
-			// 	$anchors.fill($parent);
-			// 	$color = Red;
-
-			// 	var r = @rectangle {
-			// 		$margins = 50;
-			// 		$width = 100;
-			// 		$anchors.top = $parent.top;
-			// 		$anchors.left = $parent.left;
-			// 		$anchors.bottom = $parent.bottom;
-			// 		$color = Green;
-
-			// 		@ellipse(30) {
-			// 			$anchors.fill($parent);
-			// 			$color = Black;
-			// 		}
-			// 	}
-
-			// var img = @image("teoria_veroyatnostei2") {
-			// 	$fillMode = Contain;
-			// 	$anchors.fill($parent);
-			// 	// $layout.fillWidth = true;
-			// 	// $layout.fillWidthFactor = 0.5;
-			// 	// $layout.fillHeight = true;
-			// 	// $layout.fillHeightFactor = 0.5;
-			// 	// $layout.alignment = AlignVCenter | AlignLeft;
-
-			// 	App.input.mouse.onButtonPressed(Left, (x, y) -> {
-			// 		img.sampling = switch img.sampling {
-			// 			case Nearest: Bilinear;
-			// 			case Bilinear: Prefiltered;
-			// 			case Prefiltered: Trilinear;
-			// 			case Trilinear: Nearest;
-			// 		}
-			// 	});
-			// }
-
-			// @rectangle {
-			// 	$margins = 50;
-			// 	$padding = 50;
-			// 	$anchors.top = $parent.top;
-			// 	$anchors.bottom = $parent.bottom;
-			// 	$anchors.left = r.right;
-			// 	$anchors.right = $parent.right;
-			// 	$color = Black;
-
-			// 	var grad = @gradient.linear {
-			// 		$stops = [
-			// 			{color: White, position: 0.0},
-			// 			{color: Red, position: 0.5},
-			// 			{color: Black, position: 1.0}
-			// 		];
-			// 		$interpolation = Interpolation.InQuart;
-			// 		$anchors.fill($parent);
-			// 		$padding = 50;
-			// 		$width = 100;
-
-			// 		App.input.mouse.onMoved((x, y, dx, dy) -> $start = grad.mapFromGlobalNormalized(x, y));
-
-			// 		@triangle(10) {
-			// 			$border.width = 5;
-			// 			$border.color = Blue;
-			// 			$color = Yellow;
-			// 			$anchors.fill($parent);
-			// 		}
-
-			// 		@box {
-			// 			$anchors.fill($parent);
-
-			// 			App.input.mouse.onScrolled(d -> $padding = $left.padding + d * 10);
-
-			@label("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.") {
-				$anchors.fill($parent);
-				$color = Green;
-				$fontSize = 32;
-				$elideMode = ElideLeft;
-				// $wrapMode = WrapAnywhere;
-				$alignment = AlignBottom;
-
-				new Timer(() -> $transform.rotation += 0.01, 0.01).loop();
-				
-				App.input.mouse.onButtonPressed(Left, (x, y) -> {
-					if ($alignment & AlignLeft != 0)
-						$alignment = AlignHCenter;
-					else if ($alignment & AlignHCenter != 0)
-						$alignment = AlignRight;
-					else
-						$alignment = AlignLeft;
-					$alignment = $alignment | AlignBottom;
-				});
-			}
-
-			// 		}
-			// 	}
-			// }
-			// }
+			// $padding = 50;
+			// $stops = [
+			// 	{color: White, position: 0.0},
+			// 	{color: Red, position: 0.5},
+			// 	{color: Black, position: 1.0}
+			// ];
 		}
+
+		// new Timer(() -> $transform.rotation += 0.01, 0.01).loop();
+
+		// @rectangle {
+		// 	$anchors.fill($parent);
+		// 	$color = Red;
+
+		// 	var r = @rectangle {
+		// 		$margins = 50;
+		// 		$width = 100;
+		// 		$anchors.top = $parent.top;
+		// 		$anchors.left = $parent.left;
+		// 		$anchors.bottom = $parent.bottom;
+		// 		$color = Green;
+
+		// 		@ellipse(30) {
+		// 			$anchors.fill($parent);
+		// 			$color = Black;
+		// 		}
+		// 	}
+
+		var img = @image("teoria_veroyatnostei2") {
+			$fillMode = Contain;
+			$x = 100;
+			$y = 200;
+			$width = 500;
+			$height = 350;
+			// $layout.fillWidth = true;
+			// $layout.fillWidthFactor = 0.5;
+			// $layout.fillHeight = true;
+			// $layout.fillHeightFactor = 0.5;
+			// $layout.alignment = AlignVCenter | AlignLeft;
+
+			App.input.mouse.onButtonPressed(Left, (x, y) -> {
+				img.sampling = switch img.sampling {
+					case Nearest: Bilinear;
+					case Bilinear: Prefiltered;
+					case Prefiltered: Trilinear;
+					case Trilinear: Nearest;
+				}
+			});
+		}
+
+		// @rectangle {
+		// 	$margins = 50;
+		// 	$padding = 50;
+		// 	$anchors.top = $parent.top;
+		// 	$anchors.bottom = $parent.bottom;
+		// 	$anchors.left = r.right;
+		// 	$anchors.right = $parent.right;
+		// 	$color = Black;
+
+		// 	var grad = @gradient.linear {
+		// 		$stops = [
+		// 			{color: White, position: 0.0},
+		// 			{color: Red, position: 0.5},
+		// 			{color: Black, position: 1.0}
+		// 		];
+		// 		$interpolation = Interpolation.InQuart;
+		// 		$anchors.fill($parent);
+		// 		$padding = 50;
+		// 		$width = 100;
+
+		// 		App.input.mouse.onMoved((x, y, dx, dy) -> $start = grad.mapFromGlobalNormalized(x, y));
+
+		// 		@triangle(10) {
+		// 			$border.width = 5;
+		// 			$border.color = Blue;
+		// 			$color = Yellow;
+		// 			$anchors.fill($parent);
+		// 		}
+
+		// 		@box {
+		// 			$anchors.fill($parent);
+
+		// 			App.input.mouse.onScrolled(d -> $padding = $left.padding + d * 10);
+
+		// @label("ASDASDASDSAadsda afaf mw19j311mrASDASDASDSAadsda afaf mw19j311mr") {
+		// 	$anchors.fill($parent);
+		// 	$color = Red;
+		// 	$fontSize = 32;
+		// 	// $elideMode = ElideLeft;
+		// 	// $wrapMode = WrapAnywhere;
+
+		// 	// $transform.rotation = radians(45);
+
+		// 	App.input.mouse.onButtonPressed(Left, (x, y) -> {
+		// 		if ($alignment & AlignTop != 0)
+		// 			$alignment = AlignVCenter;
+		// 		else if ($alignment & AlignVCenter != 0)
+		// 			$alignment = AlignBottom;
+		// 		else
+		// 			$alignment = AlignTop;
+		// 		$alignment = $alignment | AlignHCenter;
+		// 		trace($alignment);
+		// 	});
+		// }
+
+		// 		}
+		// 	}
+		// }
+		// }
+		// }
 	}
 }
