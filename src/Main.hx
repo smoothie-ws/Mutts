@@ -1,5 +1,6 @@
 package;
 
+import s.assets.Image;
 import s.markup.Alignment;
 import s.markup.elements.Text;
 import s.App;
@@ -17,6 +18,7 @@ class Main extends s.App implements s.markup.Markup {
 		var scene = new WindowScene(window);
 		scene.root.padding = 50;
 		markup(scene.root);
+		new Image().height;
 	}
 
 	@:ui.style
@@ -57,14 +59,14 @@ class Main extends s.App implements s.markup.Markup {
 			@label("ASDASDASDSAadsda afaf mw19j311mrASDASDASDSAadsda afaf mw19j311mr") {
 				$anchors.fill($parent);
 				$color = Red;
-				$fontSize = 32;
+				$font.pixelSize = 32;
 				$elideMode = ElideMiddle;
 				$alignment = AlignRight;
 				// $wrapMode = WrapAnywhere;
 
 				// $transform.rotation = radians(45);
 
-				App.input.mouse.onScrolled(d -> $fontSize += d);
+				App.input.mouse.onScrolled(d -> $font.pixelSize += d);
 				App.input.mouse.onButtonPressed(Left, (x, y) -> {
 					if ($alignment & AlignTop != 0)
 						$alignment = AlignVCenter;
