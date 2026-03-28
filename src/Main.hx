@@ -18,7 +18,6 @@ class Main extends s.App implements s.markup.Markup {
 		var scene = new WindowScene(window);
 		scene.root.padding = 50;
 		markup(scene.root);
-		new Image().height;
 	}
 
 	@:ui.style
@@ -56,10 +55,13 @@ class Main extends s.App implements s.markup.Markup {
 
 			// new Timer(() -> $transform.rotate(0.01, 350, 375), 0.01).loop();
 
-			@label("ASDASDASDSAadsda afaf mw19j311mrASDASDASDSAadsda afaf mw19j311mr") {
+			@label("Default permissions bla bla bla") {
 				$anchors.fill($parent);
 				$color = Red;
 				$font.pixelSize = 32;
+                $font.italic = true;
+                $font.outlineWidth = 4.0;
+                $font.outlineColor = Yellow;
 				$elideMode = ElideMiddle;
 				$alignment = AlignRight;
 				// $wrapMode = WrapAnywhere;
