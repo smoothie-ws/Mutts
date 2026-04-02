@@ -1,5 +1,5 @@
 package mutts.ui.playground;
 
-import s.markup.Element;
+import s.ui.Element;
 
-class Playground extends s.markup.Element {}
+class Playground extends s.ui.Element {}
