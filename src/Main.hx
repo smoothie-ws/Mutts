@@ -1,13 +1,5 @@
 package;
 
-import s.assets.Image;
-import s.ui.Alignment;
-import s.ui.elements.Text;
-import s.App;
-import s.Timer;
-import s.math.SMath;
-import s.Interpolation;
-import s.animation.ColorAnimation;
 import s.ui.WindowScene;
 
 @:app.title("Mutts")
