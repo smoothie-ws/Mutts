@@ -1,7 +1,0 @@
-{
-    "haxe.configurations": [
-        [
-            "build/project-debug-html5.hxml"
-        ]
-    ]
-}

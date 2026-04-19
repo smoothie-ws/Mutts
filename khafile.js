@@ -2,9 +2,12 @@ let project = new Project("New Project");
 
 project.addSources("src");
 project.addAssets("assets/**");
+
 project.addDefine("log");
-project.addDefine("S2D_DEBUG_FPS");
-project.addDefine("S2D_UI_DEBUG_ELEMENT_BOUNDS");
+project.addDefine("debug");
+project.addDefine("debug_element_bounds");
+project.addDefine('analyzer-optimize');
+project.addParameter('-main Game');
 
 await project.addProject("sengine");
 
