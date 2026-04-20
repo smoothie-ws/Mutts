@@ -27,8 +27,11 @@ class MainScreen extends Screen {
 			$anchors.fill($parent.hCenter, $parent.right, $parent.vCenter, $parent.bottom);
 
 			for (t in ["PLAY", "LEAGUE", "SETTINGS", "EXIT"]) {
-				@button(t) {
-					@:bind($isFocused) $background.color = $isFocused ? Green : Red;
+				var b = @button(t) {
+					$tags = "a b c";
+					trace(b);
+					
+					// @:bind($isFocused) $background.color = $isFocused ? Green : Red;
 
 					$label.font.pixelSize = 32;
 
