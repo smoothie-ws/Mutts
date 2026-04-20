@@ -2,7 +2,7 @@ package mutts.ui.screens;
 
 import mutts.game.GameState;
 
-class MainScreen extends Screen {
+class LeagueScreen extends Screen {
 	public function new() {
 		super("background");
 		markup(this);
@@ -38,17 +38,23 @@ class MainScreen extends Screen {
 			$anchors.fill($parent);
 		}
 
-		@layout.column {
-			for (t in [
-				{title: "PLAY", state: GameState.play},
-				{title: "LEAGUE", state: GameState.league},
-				{title: "SETTINGS", state: GameState.settings},
-				{title: "EXIT", state: GameState.exit}
-			]) {
-				@button(t.title) {
-					$onMouseClicked(_->Game.state.goto(t.state));
-				}
-			}
+		@layout.row {
+			$anchors.fill($parent);
+
+            @rectangle {
+                $anchors.fill($parent);
+            }
+
+            @layout.column {
+                $layout.alignment = AlignBottom;
+                $layout.fillWidth = true;
+                $layout.fillHeight = true;
+
+                @label("LEAGUE") {}
+                @button("BACK") {
+                    $onMouseButtonClicked(Left, () -> Game.state.goto(GameState.main));
+                }
+            }
 		}
 	}
 }

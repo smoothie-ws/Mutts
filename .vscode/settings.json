@@ -1,0 +1,15 @@
+{
+  "haxe.configurations": [
+    {
+      "label": "Mutts debug-html5",
+      "args": [
+        "vshaxe.display.hxml"
+      ],
+      "files": [
+        "src/**/*.hx",
+        "sengine/src/**/*.hx",
+        "sengine/libs/**/src/**/*.hx"
+      ]
+    }
+  ]
+}
