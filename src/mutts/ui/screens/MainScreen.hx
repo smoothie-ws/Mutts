@@ -1,8 +1,8 @@
 package mutts.ui.screens;
 
-class MainScreen extends Screen {
-	var mouseExitHooked = false;
+import mutts.game.GameState;
 
+class MainScreen extends Screen {
 	public function new() {
 		super("background");
 		markup(this);
@@ -23,24 +23,22 @@ class MainScreen extends Screen {
 		}
 
 		@layout.column {
-			$padding = 10;
+			$padding = 50;
 			$anchors.fill($parent.hCenter, $parent.right, $parent.vCenter, $parent.bottom);
 
-			for (t in ["PLAY", "LEAGUE", "SETTINGS", "EXIT"]) {
-				@button(t) {
-					@:bind($isFocused) $background.color = $isFocused ? Green : Red;
-
-					$label.font.pixelSize = 32;
-
+			for (t in [
+				{title: "PLAY", state: GameState.play},
+				{title: "LEAGUE", state: GameState.league},
+				{title: "SETTINGS", state: GameState.settings},
+				{title: "EXIT", state: GameState.exit}
+			]) {
+				@button(t.title) {
 					$margins = 10;
 					$layout.fillWidth = true;
 					$layout.fillHeight = true;
+					$label.font.pixelSize = 32;
 
-					$onMouseEntered(() -> $label.font.weight = 1000);
-					$onMouseExited(() -> $label.font.weight = 100);
-
-					$onMousePressed((m) -> $setScale(1.1));
-					$onMouseReleased((m) -> $setScale(1.0));
+					$onMouseClicked(_ -> Game.state.goto(t.state));
 				}
 			}
 		}

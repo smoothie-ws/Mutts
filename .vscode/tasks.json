@@ -5,8 +5,15 @@
   "tasks": [
     {
       "label": "Build Electron-watch",
-      "type": "shell",
-      "command": "node ${workspaceFolder}/sengine/watcher.js --kha ${command:kha.findKha} --target debug-html5",
+      "type": "process",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/sengine/watcher.js",
+        "--kha",
+        "${command:kha.findKha}",
+        "--target",
+        "debug-html5"
+      ],
       "isBackground": true,
       "problemMatcher": {
         "pattern": [

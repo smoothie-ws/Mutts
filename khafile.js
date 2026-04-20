@@ -5,7 +5,7 @@ project.addAssets("assets/**");
 
 project.addDefine("log");
 project.addDefine("debug");
-project.addDefine("debug_element_bounds");
+// project.addDefine("debug_element_bounds");
 project.addDefine('analyzer-optimize');
 project.addParameter('-main Game');
 

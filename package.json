@@ -1,0 +1,7 @@
+{
+  "name": "mutts",
+  "private": true,
+  "dependencies": {
+    "ws": "^8.20.0"
+  }
+}
