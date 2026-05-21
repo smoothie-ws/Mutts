@@ -1,35 +1,57 @@
 package mutts.ui;
 
+import s.Animation;
+import haxe.Constraints;
 import s.app.Window;
 import s.ui.Scene;
-import mutts.ui.screens.Screen;
+import mutts.ui.Screen;
 import mutts.ui.screens.MainScreen;
-import mutts.ui.screens.PlayScreen;
-import mutts.ui.screens.LeagueScreen;
-import mutts.ui.screens.SettingsScreen;
+import mutts.ui.screens.MatchScreen;
+import mutts.ui.menus.PlaygroundContent;
 
 class GameUI {
 	static var scene:Scene;
-	static var screen:Screen;
-    
-	public static var screens:{main:MainScreen, play:PlayScreen, league:LeagueScreen, settings:SettingsScreen}
+
+	public static final colors = {
+		cyan: 0xff2ae4f1,
+		red: 0xffe4236a,
+		green: 0xff2af1bf,
+		yellow: 0xfffcf376
+	}
+
+	public static var screen(default, null):Screen;
 
 	public static function init(window:Window) {
 		scene = new Scene(window);
-		screens = {
-			main: new MainScreen(),
-			play: new PlayScreen(),
-			league: new LeagueScreen(),
-			settings: new SettingsScreen()
-		};
-		setScreen(screens.main);
+		scene.color = Black;
+		setScreen(MainScreen);
+		// GameUI.setScreen(MatchScreen, () -> GameUI.setScreenMenuContent(PlaygroundContent));
 	}
 
-	public static function setScreen(screen:Screen) {
+	public static function showPopup(color:s.Color, text:String, declinable:Bool, accepted:Void->Void, ?declined:Void->Void)
+		GameWidgets.popup(scene, color, text, declinable, accepted, declined);
+
+	@:generic
+	public static function setScreen<T:Constructible<Void->Void> & Screen>(screen:Class<T>, ?callback:Void->Void) {
+		function set() {
+			GameUI.screen = new T();
+			GameUI.screen.parent = scene;
+			GameUI.screen.anchors.fill(scene);
+			if (callback != null)
+				callback();
+		}
+
 		if (GameUI.screen != null)
-			GameUI.screen.parent = null;
-		GameUI.screen = screen;
-		GameUI.screen.parent = scene;
-		GameUI.screen.anchors.fill(scene);
+			Animation.mix(1.0, 0.0, 0.25, GameUI.screen.setOpacity).onCompleted(() -> {
+				GameUI.screen.destroy();
+				set();
+				Animation.mix(0.0, 1.0, 0.25, GameUI.screen.setOpacity).start();
+			}).start();
+		else
+			set();
 	}
+
+	@:generic
+	public static function setScreenMenuContent<T:Constructible<Void->Void> & MenuContent>(content:Class<T>)
+		GameUI.screen.menu.setContent(new T());
 }

@@ -1,2 +1,0 @@
-package mutts.ui.playground;
-

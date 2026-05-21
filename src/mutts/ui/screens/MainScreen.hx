@@ -1,53 +1,18 @@
 package mutts.ui.screens;
 
-import mutts.game.GameState;
+import s.assets.Image;
+import s.math.Interpolation;
 
 class MainScreen extends Screen {
-	public function new() {
-		super("background");
-		markup(this);
-	}
-
-	@:ui.style
-	var mainScreenStyle = {
-		@layout.column {
-			$padding = 50;
-			$anchors.fill($parent.hCenter, $parent.right, $parent.vCenter, $parent.bottom);
-		}
-		@button {
-			$margins = 10;
-			$layout.fillWidth = true;
-			$layout.fillHeight = true;
-			$label.font.pixelSize = 32;
-		}
-	}
-
-	@:ui.markup @hotload.reload
-	function markup() {
-		@use mainScreenStyle;
-
-		@gradient.linear([{position: -0.5, color: Blue}, {position: 0.75, color: Transparent}]) {
-			$start = {x: 0.0, y: 0.0}
-			$end = {x: 1.0, y: 1.0}
+	@:ui.markup
+	override function markup() {
+		@image(Image.load("background")) {
+			$fillMode = Cover;
 			$anchors.fill($parent);
-		}
 
-		@gradient.linear([{position: -0.5, color: Red}, {position: 0.75, color: Transparent}]) {
-			$start = {x: 1.0, y: 1.0}
-			$end = {x: 0.0, y: 0.0}
-			$anchors.fill($parent);
-		}
-
-		@layout.column {
-			for (t in [
-				{title: "PLAY", state: GameState.play},
-				{title: "LEAGUE", state: GameState.league},
-				{title: "SETTINGS", state: GameState.settings},
-				{title: "EXIT", state: GameState.exit}
-			]) {
-				@button(t.title) {
-					$onMouseClicked(_->Game.state.goto(t.state));
-				}
+			@gradient.linear([0xC9000000, 0xB4925714]) {
+				$interpolation = Interpolation.Smoothstep;
+				$anchors.fill($parent);
 			}
 		}
 	}
