@@ -2,23 +2,31 @@ package mutts.net;
 
 import haxe.Json;
 import s.Timer;
+import s.net.Http;
 import s.net.ws.WebSocketClient;
 import mutts.net.Types;
 
-final HOST = "localhost:8080";
-typedef Message = {type:String, data:Dynamic}
+using StringTools;
+
+final API_ORIGIN = "http://193.53.40.62:8000";
+final WS_ORIGIN = "ws://193.53.40.62:8000";
 
 @:allow(Game)
-class GameClient extends WebSocketClient {
+class GameClient implements s.shortcut.Shortcut {
+	var socket:WebSocketClient;
+	var searchTimer:Timer;
+	var currentUser:BackendUser;
+	var accessToken:String;
+	var refreshToken:String;
+	var pendingMatch:Match;
+	var didAnnounceMatch:Bool = false;
+
 	var mockPlayerHealth:Int = mutts.game.Match.maxHealth;
 	var mockOpponentHealth:Int = mutts.game.Match.maxHealth;
 
-	function new() {
-		super(HOST, false);
-		Timer.set(() -> opened(), 2);
-	}
+	function new() {}
 
-	@:signal public function auth(progile:PlayerProfile);
+	@:signal public function auth(profile:PlayerProfile);
 
 	@:signal public function playerStats(stats:PlayerStats);
 
@@ -28,67 +36,294 @@ class GameClient extends WebSocketClient {
 
 	@:signal public function roundReady(response:MatchRoundResponse);
 
+	@:signal public function gameEvent(event:Dynamic);
+
+	@:signal public function failed(message:String);
+
 	public function requestAuth(login:String, password:String) {
-		// request("auth", {login: login, password: password});
-		Timer.set(() -> text(Json.stringify({
-			type: "auth",
-			data: Json.stringify({nickname: "pisapopa", id: 1})
-		})), 2);
+		if (!validateCredentials(login, password))
+			return;
+
+		var params:Map<String, String> = [];
+		params.set("username", login);
+		params.set("password", password);
+
+		final tokens:AuthTokens = postForm("/auth/token", params);
+		if (tokens == null || tokens.access_token == null || tokens.access_token == "")
+			return;
+
+		accessToken = tokens.access_token;
+		refreshToken = tokens.refresh_token;
+
+		final user:BackendUser = getJson("/auth/me", true);
+		if (user == null)
+			return;
+
+		currentUser = user;
+		auth(profile(user));
+	}
+
+	public function requestRegister(login:String, password:String) {
+		if (!validateCredentials(login, password))
+			return;
+
+		final user:BackendUser = postJson("/auth/register", {
+			username: login,
+			password: password
+		});
+		if (user != null)
+			requestAuth(login, password);
 	}
 
 	public function requestLeague(id:Int) {
-		// request("stats.player", {id: Game.player.id});
+		final leaderboard:LeaderboardResponse = getJson("/leaderboard");
+		if (leaderboard == null)
+			return;
 
-		Timer.set(() -> text(Json.stringify({
-			type: "stats.player",
-			data: Json.stringify({
-				id: id,
-				mmr: Std.int(Math.random() * 10000),
-				win_count: Std.int(Math.random() * 1000),
-				lose_count: Std.int(Math.random() * 1000)
-			})
-		})), 2);
+		var selected:BackendUser = null;
+		final stats:GlobalStats = [];
+		for (user in leaderboard.players) {
+			stats.push({
+				id: user.id,
+				nickname: user.username,
+				mmr: user.rating
+			});
+			if (user.id == id)
+				selected = user;
+		}
 
-		Timer.set(() -> text(Json.stringify({
-			type: "stats.global",
-			data: Json.stringify([
-				{id: 0, nickname: "LIZA", mmr: 8000},
-				{id: 1, nickname: "LIZA1", mmr: 7000},
-				{id: 2, nickname: "LIZA2", mmr: 6000},
-				{id: 3, nickname: "LIZA3", mmr: 5000},
-				{id: 4, nickname: "LIZA4", mmr: 4000},
-				{id: 5, nickname: "LIZA5", mmr: 2000},
-			])
-		})), 2);
+		if (selected == null && currentUser != null && currentUser.id == id)
+			selected = currentUser;
+
+		globalStats(stats);
+
+		if (selected == null) {
+			failed("The backend only exposes profile stats for leaderboard users.");
+			return;
+		}
+
+		playerStats({
+			id: selected.id,
+			mmr: selected.rating,
+			win_count: 0,
+			lose_count: 0
+		});
 	}
 
 	public function requestGame() {
-		// request("game.join", {id: Game.player.id});
+		if (!isAuthenticated())
+			return;
+
+		cancelSearchTimer();
+		closeSocket();
 		mockPlayerHealth = mutts.game.Match.maxHealth;
 		mockOpponentHealth = mutts.game.Match.maxHealth;
 
-		Timer.set(() -> text(Json.stringify({
-			type: "game.ready",
-			data: Json.stringify({
-				opponent: {
-					id: 1,
-					nickname: "Opponent",
-				},
-				location: 0
-			})
-		})), 2);
+		final result:Dynamic = postEmpty("/matchmaking/join?access_token=" + accessToken.urlEncode());
+		if (result != null)
+			pollMatchStatus();
 	}
 
+	public function cancelSearch() {
+		cancelSearchTimer();
+		if (accessToken != null)
+			postEmpty("/matchmaking/leave?access_token=" + accessToken.urlEncode());
+	}
+
+	public function closeGame() {
+		cancelSearchTimer();
+		closeSocket();
+		pendingMatch = null;
+		didAnnounceMatch = false;
+	}
+
+	public function placeUnit(unitType:String)
+		sendGame({
+			type: "place_unit",
+			unit_type: unitType
+		});
+
+	public function moveUnit(unitId:String, x:Int, y:Int, location:String)
+		sendGame({
+			type: "move_unit",
+			unit_id: unitId,
+			x: x,
+			y: y,
+			location: location
+		});
+
+	public function sellUnit(unitId:String)
+		sendGame({
+			type: "sell_unit",
+			unit_id: unitId
+		});
+
 	public function requestRound(units:Array<UnitPlacement>) {
-		// request("game.round", units);
+		// Local matches still consume timeline actions; backend battle events use
+		// another model, so the renderer keeps this compatibility fallback.
 		Timer.set(() -> roundReady(mockRound(units)), 0.25);
 	}
 
-	function request(type:String, data:Dynamic)
-		send(Json.stringify({type: type, data: data}));
+	function pollMatchStatus() {
+		final status:QueueStatus = getJson("/matchmaking/status?access_token=" + accessToken.urlEncode());
+		if (status == null)
+			return;
 
-	function decode<T>(data:Dynamic):T
-		return Std.isOfType(data, String) ? Json.parse(data) : data;
+		switch status.status {
+			case "in_game":
+				if (status.game_id == null)
+					failed("Matchmaking reported a game without a game id.");
+				else
+					connectGameSocket(status.game_id);
+			case "searching":
+				searchTimer = Timer.set(pollMatchStatus, 1.0);
+			case "idle":
+				failed("Matchmaking queue is idle.");
+			default:
+				failed("Unknown matchmaking status: " + status.status);
+		}
+	}
+
+	function connectGameSocket(gameId:String) {
+		cancelSearchTimer();
+		pendingMatch = null;
+		didAnnounceMatch = false;
+
+		socket = new WebSocketClient(WS_ORIGIN + "/ws/game/" + gameId + "?access_token=" + accessToken.urlEncode(), "GAME", false);
+		socket.onText(processText);
+		socket.connect();
+	}
+
+	function sendGame(event:Dynamic) {
+		if (socket == null || !socket.running) {
+			failed("Game WebSocket is not connected.");
+			return;
+		}
+
+		socket.send(Json.stringify(event));
+	}
+
+	function receiveGameState(state:BackendGameState) {
+		if (currentUser == null || state == null)
+			return;
+
+		final isPlayer1 = state.player1.username == currentUser.username;
+		final opponent = isPlayer1 ? state.player2.username : state.player1.username;
+		pendingMatch = {
+			opponent: {
+				id: -1,
+				nickname: opponent
+			},
+			location: isPlayer1 ? 0 : 1
+		};
+
+		if (state.round > 0)
+			announceMatch();
+	}
+
+	function announceMatch() {
+		if (didAnnounceMatch || pendingMatch == null)
+			return;
+
+		didAnnounceMatch = true;
+		gameReady(pendingMatch);
+	}
+
+	function profile(user:BackendUser):PlayerProfile
+		return {
+			id: user.id,
+			nickname: user.username
+		};
+
+	function validateCredentials(login:String, password:String):Bool {
+		if (login.length > 0 && password.length > 0)
+			return true;
+
+		failed("Login and password are required.");
+		return false;
+	}
+
+	function isAuthenticated():Bool {
+		if (accessToken != null)
+			return true;
+
+		failed("Authentication is required.");
+		return false;
+	}
+
+	function authHeaders():Map<s.net.http.Header, String> {
+		final headers:Map<s.net.http.Header, String> = [];
+		headers.set("Authorization", "Bearer " + accessToken);
+		return headers;
+	}
+
+	function getJson<T>(path:String, authenticated:Bool = false):Null<T>
+		return decodeResponse(Http.request(API_ORIGIN, {
+			path: path,
+			headers: authenticated ? authHeaders() : []
+		}));
+
+	function postEmpty<T>(path:String):Null<T>
+		return decodeResponse(Http.request(API_ORIGIN, {
+			path: path,
+			method: Post
+		}));
+
+	function postForm<T>(path:String, params:Map<String, String>):Null<T>
+		return decodeResponse(Http.request(API_ORIGIN, {
+			path: path,
+			method: Post,
+			params: params
+		}));
+
+	function postJson<T>(path:String, data:Dynamic):Null<T> {
+		final headers:Map<s.net.http.Header, String> = [];
+		headers.set("Content-Type", "application/json");
+		return decodeResponse(Http.request(API_ORIGIN, {
+			path: path,
+			method: Post,
+			headers: headers,
+			data: Json.stringify(data)
+		}));
+	}
+
+	function decodeResponse<T>(response:s.net.HttpResponse):Null<T> {
+		if (response == null) {
+			failed("Backend did not return a response.");
+			return null;
+		}
+
+		final status:Int = response.status;
+		if (response.error != null || status < 200 || status >= 300) {
+			failed(response.error ?? 'HTTP $status: ${response.statusText}');
+			return null;
+		}
+
+		final body = response.data ?? response.bytes?.toString();
+		if (body == null || body == "")
+			return cast {};
+
+		try {
+			return Json.parse(body);
+		} catch (e:Dynamic) {
+			failed("Backend returned invalid JSON: " + Std.string(e));
+			return null;
+		}
+	}
+
+	function cancelSearchTimer() {
+		searchTimer?.stop();
+		searchTimer = null;
+	}
+
+	function closeSocket() {
+		if (socket == null)
+			return;
+
+		if (socket.running)
+			socket.close();
+		socket = null;
+	}
 
 	function mockRound(units:Array<UnitPlacement>):MatchRoundResponse {
 		var playerDamage = 0;
@@ -152,21 +387,18 @@ class GameClient extends WebSocketClient {
 		}
 	}
 
-	@:slot(text)
 	function processText(text:String) {
-		var msg:Message = Json.parse(text);
+		var msg:Dynamic = Json.parse(text);
+		gameEvent(msg);
 
 		switch msg.type {
-			case "auth":
-				auth(decode(msg.data));
-			case "stats.player":
-				playerStats(decode(msg.data));
-			case "stats.global":
-				globalStats(decode(msg.data));
-			case "game.ready":
-				gameReady(decode(msg.data));
-			case "game.round":
-				roundReady(decode(msg.data));
+			case "game_state":
+				receiveGameState(msg.state);
+			case "planning_phase_start":
+				announceMatch();
+			default:
+				if (msg.success == false)
+					failed(msg.error ?? "Backend rejected a game event.");
 		}
 	}
 }

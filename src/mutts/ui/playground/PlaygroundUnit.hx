@@ -137,7 +137,10 @@ class PlaygroundUnit extends Interactive {
 		final duration = Math.max(0.01, action.duration);
 
 		if (action.id == Spawn && target != null) {
-			place(target.row, target.column);
+			x = target.ui.x;
+			y = target.ui.y;
+			spriteCenterX = target.point.x;
+			spriteCenterY = target.point.y;
 			spriteScale = 0.0;
 			applySpriteTransform();
 		}
@@ -171,13 +174,10 @@ class PlaygroundUnit extends Interactive {
 			case Idle:
 		}).ease(Easing.OutQuint).onCompleted(() -> {
 			if (action.id == Walk && target != null) {
-				unit.row = target.row;
-				unit.column = target.column;
 				x = target.ui.x;
 				y = target.ui.y;
 				spriteCenterX = target.point.x;
 				spriteCenterY = target.point.y;
-				rememberCurrentLayout();
 			} else {
 				spriteCenterX = from.x;
 				spriteCenterY = from.y;
@@ -205,14 +205,6 @@ class PlaygroundUnit extends Interactive {
 			point: point,
 			ui: vec2(screenPoint.x - width * 0.5, screenPoint.y - height * 0.5)
 		};
-	}
-
-	function rememberCurrentLayout():Void {
-		lastRow = unit.row;
-		lastColumn = unit.column;
-		lastStageWidth = sprite.stage?.width ?? -1.0;
-		lastStageHeight = sprite.stage?.height ?? -1.0;
-		lastStageScale = sprite.stage?.stageScale ?? -1.0;
 	}
 
 	override function update() {

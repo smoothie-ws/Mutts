@@ -24,97 +24,93 @@ class LeagueContent extends MenuContent {
 
 	@:ui.markup
 	override function markup() {
-		@markup(GameWidgets.panel(GameUI.colors.cyan)) {
+		@layout.column {
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
 
-			@layout.column {
-				$anchors.fill($parent);
+			@element {
+				$margins = 25;
+				$layout.fillWidth = true;
+				$layout.fillHeight = true;
 
-				@element {
-					$margins = 25;
-					$layout.fillWidth = true;
-					$layout.fillHeight = true;
-
-					@markup(GameWidgets.loading(GameUI.colors.cyan)) {
-						$anchors.vCenter = $parent.vCenter;
-						Game.client.onGlobalStats(_ -> $destroy());
-					}
-
-					globalColumn = @column {
-						$spacing = 10;
-						$anchors.fill($parent);
-					}
+				@markup(GameWidgets.loading(GameUI.colors.cyan)) {
+					$anchors.vCenter = $parent.vCenter;
+					Game.client.onGlobalStats(_ -> $destroy());
 				}
 
-				@markup(GameWidgets.panel(GameUI.colors.cyan)) {
-					$height = 100;
-					$layout.fillWidth = true;
+				globalColumn = @column {
+					$spacing = 10;
+					$anchors.fill($parent);
+				}
+			}
 
-					@layout.row {
-						$anchors.fill($parent);
+			@markup(GameWidgets.panel(GameUI.colors.cyan)) {
+				$height = 100;
+				$layout.fillWidth = true;
 
-						@markup(GameWidgets.label(White, "NICKNAME")) {
+				@layout.row {
+					$anchors.fill($parent);
+
+					@markup(GameWidgets.label(White, "NICKNAME")) {
+						$layout.fillWidth = true;
+						$layout.horizontalStretchFactor = 2 / 3;
+					}
+
+					@layout.column {
+						$spacing = 0;
+						$layout.fillWidth = true;
+						$layout.fillHeight = true;
+
+						@layout.row {
+							$opacity = 0.5;
+							$layout.alignment = AlignBottom;
 							$layout.fillWidth = true;
-							$layout.horizontalStretchFactor = 2 / 3;
+							$layout.fillHeight = true;
+							$layout.verticalStretchFactor = 2 / 3;
+
+							for (title in ["MMR", "W", "L", "WR", "T"]) {
+								@markup(GameWidgets.label(White, title)) {
+									$alignment = AlignHCenter | AlignBottom;
+									$layout.alignment = AlignBottom;
+									$font.size = 18;
+									$layout.fillWidth = true;
+								}
+							}
 						}
 
-						@layout.column {
-							$spacing = 0;
+						@layout.row {
+							$layout.alignment = AlignTop;
 							$layout.fillWidth = true;
 							$layout.fillHeight = true;
 
-							@layout.row {
-								$opacity = 0.5;
-								$layout.alignment = AlignBottom;
-								$layout.fillWidth = true;
-								$layout.fillHeight = true;
-								$layout.verticalStretchFactor = 2 / 3;
-
-								for (title in ["MMR", "W", "L", "WR", "T"]) {
-									@markup(GameWidgets.label(White, title)) {
-										$alignment = AlignHCenter | AlignBottom;
-										$layout.alignment = AlignBottom;
-										$font.size = 18;
-										$layout.fillWidth = true;
-									}
-								}
-							}
-
-							@layout.row {
+							ratingLabel = @markup(GameWidgets.label(White, "MMR")) {
+								$alignment = AlignHCenter | AlignTop;
 								$layout.alignment = AlignTop;
 								$layout.fillWidth = true;
-								$layout.fillHeight = true;
+							}
 
-								ratingLabel = @markup(GameWidgets.label(White, "MMR")) {
-									$alignment = AlignHCenter | AlignTop;
-									$layout.alignment = AlignTop;
-									$layout.fillWidth = true;
-								}
+							winsLabel = @markup(GameWidgets.label(White, "WINS")) {
+								$alignment = AlignHCenter | AlignTop;
+								$layout.alignment = AlignTop;
+								$layout.fillWidth = true;
+							}
 
-								winsLabel = @markup(GameWidgets.label(White, "WINS")) {
-									$alignment = AlignHCenter | AlignTop;
-									$layout.alignment = AlignTop;
-									$layout.fillWidth = true;
-								}
+							lossesLabel = @markup(GameWidgets.label(White, "LOSSES")) {
+								$alignment = AlignHCenter | AlignTop;
+								$layout.alignment = AlignTop;
+								$layout.fillWidth = true;
+							}
 
-								lossesLabel = @markup(GameWidgets.label(White, "LOSSES")) {
-									$alignment = AlignHCenter | AlignTop;
-									$layout.alignment = AlignTop;
-									$layout.fillWidth = true;
-								}
+							winrateLabel = @markup(GameWidgets.label(White, "WINRATE")) {
+								$alignment = AlignHCenter | AlignTop;
+								$layout.alignment = AlignTop;
+								$layout.fillWidth = true;
+							}
 
-								winrateLabel = @markup(GameWidgets.label(White, "WINRATE")) {
-									$alignment = AlignHCenter | AlignTop;
-									$layout.alignment = AlignTop;
-									$layout.fillWidth = true;
-								}
-
-								totalLabel = @markup(GameWidgets.label(White, "TOTAL")) {
-									$alignment = AlignHCenter | AlignTop;
-									$layout.alignment = AlignTop;
-									$layout.fillWidth = true;
-								}
+							totalLabel = @markup(GameWidgets.label(White, "TOTAL")) {
+								$alignment = AlignHCenter | AlignTop;
+								$layout.alignment = AlignTop;
+								$layout.fillWidth = true;
 							}
 						}
 					}
@@ -161,7 +157,7 @@ class LeagueContent extends MenuContent {
 				@interactive {
 					$cursor = Pointer;
 					$anchors.fill($parent);
-					$onMouseClicked(b -> Game.client.requestLeague(stat.id));
+					$onMouseClicked(b->Game.client.requestLeague(stat.id));
 				}
 
 				@layout.row {

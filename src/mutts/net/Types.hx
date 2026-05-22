@@ -2,6 +2,17 @@ package mutts.net;
 
 // common
 typedef Error = {message:String};
+typedef AuthTokens = {access_token:String, refresh_token:String, ?token_type:String};
+typedef BackendUser = {id:Int, username:String, rating:Int};
+typedef LeaderboardResponse = {players:Array<BackendUser>};
+typedef QueueStatus = {status:String, ?queue_size:Int, ?game_id:String};
+typedef BackendPlayerState = {username:String, hp:Int, coins:Int, max_units:Int};
+typedef BackendGameState = {
+	game_id:String,
+	player1:BackendPlayerState,
+	player2:BackendPlayerState,
+	round:Int
+};
 // player
 typedef PlayerProfile = {id:Int, nickname:String};
 // stats

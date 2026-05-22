@@ -56,13 +56,13 @@ class GameWidgets implements Markup {
 			@rectangle {
 				$color = 0xFF180D05;
 				$radius = 0;
-				$softness = 50;
-				$width = 650;
 				$height = 350;
+				$anchors.fillWidth($parent);
 				$anchors.centerIn($parent);
 
 				@markup(panel(GameUI.colors.cyan)) {
-					$margins = 25;
+					$left.margin = -50;
+					$right.margin = -50;
 					$anchors.fill($parent);
 
 					@layout.column {
@@ -80,22 +80,31 @@ class GameWidgets implements Markup {
 							$layout.fillWidth = true;
 							$layout.fillHeight = true;
 
-							@markup(button(GameUI.colors.red, "NO")) {
-								$layout.alignment = AlignCenter;
-								$onMouseClicked(_ -> Animation.mix(1.0, 0.0, 0.15, x -> p.opacity = x).onCompleted(() -> {
-									p.destroy();
-									if (declined != null)
-										declined();
-								}).start());
-								$onMouseClicked(_ -> {});
-							}
+							if (declinable) {
+								@markup(button(GameUI.colors.red, "NO")) {
+									$layout.alignment = AlignCenter;
+									$onMouseClicked(_ -> Animation.mix(1.0, 0.0, 0.15, x -> p.opacity = x).onCompleted(() -> {
+										p.destroy();
+										if (declined != null)
+											declined();
+									}).start());
+								}
 
-							@markup(button(GameUI.colors.green, "YES")) {
-								$layout.alignment = AlignCenter;
-								$onMouseClicked(_ -> {
-									p.destroy();
-									accepted();
-								});
+								@markup(button(GameUI.colors.green, "YES")) {
+									$layout.alignment = AlignCenter;
+									$onMouseClicked(_ -> {
+										p.destroy();
+										accepted();
+									});
+								}
+							} else {
+								@markup(button(GameUI.colors.green, "OK")) {
+									$layout.alignment = AlignCenter;
+									$onMouseClicked(_ -> {
+										p.destroy();
+										accepted();
+									});
+								}
 							}
 						}
 					}
@@ -156,7 +165,7 @@ class GameWidgets implements Markup {
 			$shearX = -0.2;
 
 			var hovered = new s.shortcut.signals.Signal<Bool->Void>();
-			hovered.connect(b -> s.Animation.mix($scaleX, b ? 1.1 : 1.0, 0.5, x -> $setScale(x)).ease(s.Easing.OutElastic).start());
+			hovered.connect(b -> s.Animation.mix($scaleX, b ? 1.1 : 1, x -> $setScale(x)).ease(s.Easing.OutElastic).start());
 
 			$onMouseEntered(() -> hovered(true));
 			$onMouseExited(() -> hovered(false));
@@ -238,6 +247,56 @@ class GameWidgets implements Markup {
 			}
 
 			@markup(label(White, Std.string(to))) $width = 75;
+		}
+	}
+
+	@:ui.markup
+	public static function input(color:s.Color, prompt:String):s.ui.elements.Interactive {
+		@interactive {
+			$cursor = Pointer;
+			$opacity = 0.5;
+
+			var promptLabel = @markup(label(color, prompt)) {
+				$opacity = 0.5;
+				$anchors.fill($parent);
+				$shearX = 0.0;
+				$font.letterSpacing = 15;
+			}
+
+			var textLabel = @markup(label(color, "")) "text" = {
+				$anchors.fill($parent);
+				$shearX = 0.0;
+				$font.letterSpacing = 15;
+
+				@rectangle "underline" = {
+					$color = color;
+					$height = 2;
+					$isVisible = false;
+					$anchors.fillWidth($parent);
+					$anchors.top = $parent.bottom;
+				}
+			}
+
+			var underline = cast(textLabel.findChild("underline"), Rectangle);
+
+			$onUpdated(() -> {
+				if (@:privateAccess $isFocusedDirty) {
+					underline.isVisible = $isFocused;
+					$opacity = $isFocused ? 1.0 : 0.5;
+				}
+			});
+
+			function updateText()
+				textLabel.isVisible = !(promptLabel.isVisible = textLabel.text.length == 0);
+
+			$onKeyboardTyped(c -> {
+				textLabel.text += c;
+				updateText();
+			});
+			$onKeyboardKeyPressed(Backspace, () -> {
+				textLabel.text = textLabel.text.substr(0, textLabel.text.length - 1);
+				updateText();
+			});
 		}
 	}
 }

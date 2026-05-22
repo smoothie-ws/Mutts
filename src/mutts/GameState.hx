@@ -1,6 +1,7 @@
 package mutts;
 
 import s.FSM;
+import s.Timer;
 import s.app.input.Shortcut;
 import mutts.ui.GameUI;
 import mutts.ui.screens.MainScreen;
@@ -33,7 +34,7 @@ class GameState extends FSM {
 		// start states
 		start[connecting] = () -> {
 			GameUI.setScreenMenuContent(ConnectingContent);
-			Game.client.onOpened(() -> Game.state.goto(auth));
+			Timer.set(() -> Game.state.goto(auth), 0);
 		}
 
 		// connecting states
@@ -66,6 +67,10 @@ class GameState extends FSM {
 
 		// searching states
 		searching[play] = () -> GameUI.setScreen(MatchScreen, () -> GameUI.setScreenMenuContent(PlaygroundContent));
+		searching[main] = () -> {
+			Game.client.cancelSearch();
+			GameUI.setScreenMenuContent(MainContent);
+		}
 
 		// play states
 		play[playMenu] = () -> GameUI.screen.showMenu(true);
@@ -103,6 +108,7 @@ class GameState extends FSM {
 		goto([
 			play => playMenu,
 			playMenu => play,
+			searching => main,
 			league => main,
 			settings => states.pop() ?? main
 		].get(current));
@@ -111,6 +117,7 @@ class GameState extends FSM {
 		GameUI.showPopup(GameUI.colors.red, "Are you sure?", true, () -> goto(main), () -> goto(playMenu));
 
 	function leaveMatch():Void {
+		Game.client.closeGame();
 		Game.match = null;
 		GameUI.setScreen(MainScreen, () -> GameUI.setScreenMenuContent(MainContent));
 	}

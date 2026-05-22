@@ -23,7 +23,7 @@ import mutts.ui.playground.PlaygroundUnit;
 import mutts.ui.playground.PlaygroundPlayerCard;
 
 class MatchScreen extends Screen {
-	static inline final preparationTime:Int = 30;
+	static inline final preparationTime:Int = 20;
 
 	var stage:Stage;
 	var opponentCard:PlaygroundPlayerCard;
@@ -247,7 +247,7 @@ class MatchScreen extends Screen {
 		function toMain() {
 			Game.state.goto(GameState.main);
 		}
-		GameUI.showPopup(GameUI.colors.green, "WINNER: " + name, false, toMain, toMain);
+		GameUI.showPopup(GameUI.colors.green, "WINNER: " + name, false, toMain);
 	}
 
 	@:ui.markup override function markup() {
