@@ -58,12 +58,9 @@ class GameWidgets implements Markup {
 				$radius = 0;
 				$height = 350;
 				$anchors.fillWidth($parent);
-				$anchors.fillWidth($parent);
 				$anchors.centerIn($parent);
 
 				@markup(panel(GameUI.colors.cyan)) {
-					$left.margin = -50;
-					$right.margin = -50;
 					$left.margin = -50;
 					$right.margin = -50;
 					$anchors.fill($parent);
@@ -101,31 +98,7 @@ class GameWidgets implements Markup {
 											declined();
 									}).start());
 								}
-							if (declinable) {
-								@markup(button(GameUI.colors.red, "NO")) {
-									$layout.alignment = AlignCenter;
-									$onMouseClicked(_ -> Animation.mix(1.0, 0.0, 0.15, x -> p.opacity = x).onCompleted(() -> {
-										p.destroy();
-										if (declined != null)
-											declined();
-									}).start());
-								}
 
-								@markup(button(GameUI.colors.green, "YES")) {
-									$layout.alignment = AlignCenter;
-									$onMouseClicked(_ -> {
-										p.destroy();
-										accepted();
-									});
-								}
-							} else {
-								@markup(button(GameUI.colors.green, "OK")) {
-									$layout.alignment = AlignCenter;
-									$onMouseClicked(_ -> {
-										p.destroy();
-										accepted();
-									});
-								}
 								@markup(button(GameUI.colors.green, "YES")) {
 									$layout.alignment = AlignCenter;
 									$onMouseClicked(_ -> {

@@ -8,29 +8,16 @@ class AuthContent extends MenuContent {
 	var login:Bool = true;
 	var loginInput:Interactive;
 	var passwordInput:Interactive;
-	var loginInput:Interactive;
-	var passwordInput:Interactive;
 	var changeModeButton:Interactive;
 	var proceedButton:Interactive;
 
 	public function new() {
-	public function new() {
 		super("AUTHORIZATION");
-		Game.client.onFailed(showError);
-	}
 		Game.client.onFailed(showError);
 	}
 
 	@:ui.markup
 	override function markup() {
-		loginInput = @markup(GameWidgets.input(GameUI.colors.cyan, "LOGIN")) {
-			$height = 50;
-			$layout.fillWidth = true;
-		}
-
-		passwordInput = @markup(GameWidgets.input(GameUI.colors.cyan, "PASSWORD")) {
-			$height = 50;
-			$layout.fillWidth = true;
 		loginInput = @markup(GameWidgets.input(GameUI.colors.cyan, "LOGIN")) {
 			$height = 50;
 			$layout.fillWidth = true;
@@ -59,25 +46,6 @@ class AuthContent extends MenuContent {
 				$height = 105;
 				cast($findChild("label"), Label).font.size = 32;
 				$layout.alignment = AlignCenter;
-				$onMouseClicked(_ -> proceed());
-			}
-		}
-	}
-
-	function proceed() {
-		final username = getInputText(loginInput);
-		final password = getInputText(passwordInput);
-		if (login)
-			Game.client.requestAuth(username, password);
-		else
-			Game.client.requestRegister(username, password);
-	}
-
-	function getInputText(input:Interactive):String
-		return cast(input.findChild("text"), Label).text;
-
-	function showError(message:String)
-		GameUI.showPopup(GameUI.colors.red, message, false, () -> {});
 				$onMouseClicked(_ -> proceed());
 			}
 		}

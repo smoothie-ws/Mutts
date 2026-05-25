@@ -56,11 +56,14 @@ class SettingsContent extends MenuContent {
 		@layout.row {
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
-			$layout.fillHeight = true;
 
 			@markup(GameWidgets.button(GameUI.colors.cyan, "Restore")) {
-				$width = 200;
-				$height = 75;
+				$width = 260;
+				$height = 85;
+				$layout.minimumWidth = 260;
+				$layout.maximumWidth = 260;
+				$layout.minimumHeight = 85;
+				$layout.maximumHeight = 85;
 				cast($findChild("label"), s.ui.elements.Label).font.size = 26;
 				$layout.alignment = AlignBottomCenter;
 				$onMouseClicked(_ -> {
@@ -74,8 +77,12 @@ class SettingsContent extends MenuContent {
 			@element $layout.fillWidth = true;
 
 			@markup(GameWidgets.button(GameUI.colors.red, "Cancel")) {
-				$width = 180;
-				$height = 75;
+				$width = 260;
+				$height = 85;
+				$layout.minimumWidth = 260;
+				$layout.maximumWidth = 260;
+				$layout.minimumHeight = 85;
+				$layout.maximumHeight = 85;
 				cast($findChild("label"), s.ui.elements.Label).font.size = 26;
 				$layout.alignment = AlignBottomCenter;
 				$onMouseClicked(_ -> {
@@ -85,8 +92,12 @@ class SettingsContent extends MenuContent {
 			}
 
 			@markup(GameWidgets.button(GameUI.colors.green, "Save")) {
-				$width = 180;
-				$height = 75;
+				$width = 260;
+				$height = 85;
+				$layout.minimumWidth = 260;
+				$layout.maximumWidth = 260;
+				$layout.minimumHeight = 85;
+				$layout.maximumHeight = 85;
 				cast($findChild("label"), s.ui.elements.Label).font.size = 26;
 				$layout.alignment = AlignBottomCenter;
 				$onMouseClicked(_ -> {
