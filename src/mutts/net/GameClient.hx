@@ -2,6 +2,7 @@ package mutts.net;
 
 import haxe.Json;
 import s.Timer;
+import s.net.Http;
 import s.net.ws.WebSocketClient;
 import mutts.game.BackendState;
 import mutts.game.GameConfigs;

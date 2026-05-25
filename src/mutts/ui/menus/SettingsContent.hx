@@ -56,6 +56,7 @@ class SettingsContent extends MenuContent {
 		@layout.row {
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
+			$layout.fillHeight = true;
 
 			@markup(GameWidgets.button(GameUI.colors.cyan, "Restore")) {
 				$width = 200;
