@@ -55,69 +55,71 @@ class PlaygroundPlayerCard extends Element {
 		@markup(GameWidgets.panel(color)) {
 			$anchors.fill($parent);
 
-			@layout.row(direction) {
-				$anchors.fill($parent);
-				$spacing = 10;
-				$margins = 15;
+			@icon(s.assets.Image.load("player_icon" + num)) {
+				$color = color;
+				$sampling = Trilinear;
+				$width = $height = 70;
+				$x = direction.matches(LeftToRight) ? 12 : 418;
+				$y = 15;
+			}
 
-				@icon(s.assets.Image.load("player_icon" + num)) {
-					$color = color;
-					$sampling = Trilinear;
-					$width = $height = 75;
-				}
+			@layout.column {
+				$x = direction.matches(LeftToRight) ? 96 : 12;
+				$y = 18;
+				$width = 392;
+				$height = 64;
+				$spacing = 7;
 
-				@column {
-					$alignment = AlignVCenter | (direction.matches(LeftToRight) ? AlignLeft : AlignRight);
+				@layout.row {
 					$layout.fillWidth = true;
-					$layout.fillHeight = true;
+					$height = 44;
+					$spacing = 10;
 
-					@layout.row {
-						$layout.fillWidth = true;
-						$height = 45;
+					if (direction.matches(LeftToRight)) {
+						@markup(GameWidgets.label(White, nickname)) {
+							$font.size = 20;
+							$alignment = AlignLeft | AlignVCenter;
+							$layout.fillWidth = true;
+						}
 
-						if (direction.matches(LeftToRight)) {
-							@markup(GameWidgets.label(White, nickname)) {
-								$font.size = 20;
-								$alignment = AlignLeft | AlignVCenter;
-								$layout.fillWidth = true;
-							}
+						healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
+							$width = 110;
+							$font.size = 18;
+							$alignment = AlignRight | AlignVCenter;
+						}
+					} else {
+						healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
+							$width = 110;
+							$font.size = 18;
+							$alignment = AlignLeft | AlignVCenter;
+						}
 
-							healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
-								$width = 100;
-								$font.size = 18;
-								$alignment = AlignRight | AlignVCenter;
-							}
-						} else {
-							healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
-								$width = 100;
-								$font.size = 18;
-								$alignment = AlignLeft | AlignVCenter;
-							}
-
-							@markup(GameWidgets.label(White, nickname)) {
-								$font.size = 20;
-								$alignment = AlignRight | AlignVCenter;
-								$layout.fillWidth = true;
-							}
+						@markup(GameWidgets.label(White, nickname)) {
+							$font.size = 20;
+							$alignment = AlignRight | AlignVCenter;
+							$layout.fillWidth = true;
 						}
 					}
+				}
 
-					healthTrack = @rectangle {
-						$height = 10;
-						$radius = 20;
-						$softness = 10;
-						$color = rgba(color.r, color.g, color.b, 0.25);
-						$layout.fillWidth = true;
+				healthTrack = @rectangle {
+					$height = 12;
+					$radius = 20;
+					$softness = 10;
+					$color = rgba(color.r, color.g, color.b, 0.25);
+					$layout.fillWidth = true;
 
-						healthFill = @rectangle {
+					healthFill = @rectangle {
+						if (direction.matches(LeftToRight))
 							$anchors.left = $parent.left;
-							$anchors.top = $parent.top;
-							$anchors.bottom = $parent.bottom;
-							$margins = 1;
-							$radius = 20;
-							$softness = 3;
-							$color = color;
-						}
+						else
+							$anchors.right = $parent.right;
+						$anchors.top = $parent.top;
+						$anchors.bottom = $parent.bottom;
+						$margins = 1;
+						$radius = 20;
+						$softness = 3;
+						$color = color;
 					}
 				}
 			}

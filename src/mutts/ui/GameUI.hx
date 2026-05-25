@@ -6,8 +6,6 @@ import s.app.Window;
 import s.ui.Scene;
 import mutts.ui.Screen;
 import mutts.ui.screens.MainScreen;
-import mutts.ui.screens.MatchScreen;
-import mutts.ui.menus.PlaygroundContent;
 
 class GameUI {
 	static var scene:Scene;
@@ -16,7 +14,8 @@ class GameUI {
 		cyan: 0xff2ae4f1,
 		red: 0xffe4236a,
 		green: 0xff2af1bf,
-		yellow: 0xfffcf376
+		yellow: 0xfffcf376,
+		neonWhite: 0xffe8feff
 	}
 
 	public static var screen(default, null):Screen;
@@ -25,7 +24,6 @@ class GameUI {
 		scene = new Scene(window);
 		scene.color = Black;
 		setScreen(MainScreen);
-		// GameUI.setScreen(MatchScreen, () -> GameUI.setScreenMenuContent(PlaygroundContent));
 	}
 
 	public static function showPopup(color:s.Color, text:String, declinable:Bool, accepted:Void->Void, ?declined:Void->Void)

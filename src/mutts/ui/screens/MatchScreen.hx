@@ -1,7 +1,6 @@
 package mutts.ui.screens;
 
 import s.assets.Image;
-import s.Timer;
 import s.ui.Alignment;
 import s.ui.elements.ImageElement;
 import s.ui.elements.Label;
@@ -11,20 +10,14 @@ import s.app.input.MouseButton;
 import s.stage2d.Stage;
 import s.stage2d.objects.Sprite;
 import mutts.GameState;
+import mutts.game.BattleEvents;
 import mutts.game.Unit;
 import mutts.game.MatchPhase;
 import mutts.game.Match;
-import mutts.net.Types.Action;
-import mutts.net.Types.MatchBattle;
-import mutts.net.Types.MatchRoundResponse;
-import mutts.net.Types.MatchRoundResult;
-import mutts.net.Types.UnitTimeline;
 import mutts.ui.playground.PlaygroundUnit;
 import mutts.ui.playground.PlaygroundPlayerCard;
 
 class MatchScreen extends Screen {
-	static inline final preparationTime:Int = 30;
-
 	var stage:Stage;
 	var opponentCard:PlaygroundPlayerCard;
 	var playerCard:PlaygroundPlayerCard;
@@ -37,25 +30,18 @@ class MatchScreen extends Screen {
 	var shopLayout:RowLayout;
 	var benchLayout:ColumnLayout;
 	var groundSprites:Array<PlaygroundUnit> = [];
-	var roundTimer:Timer;
-	var nextRoundTimer:Timer;
-	var timeLeft:Int = 0;
+	var battlePlayer:MatchBattlePlayer;
+	var pendingBuySlot:Null<Int>;
 
 	public function new() {
-		// temp
-		if (Game.player == null)
-			Game.player = {id: 0, nickname: "Player"};
-		if (Game.match == null)
-			Game.match = new Match({id: 1, nickname: "Opponent"}, 0);
-		Game.client.onRoundReady(onRoundReady);
+		Game.client.onGameEvent(onGameEvent);
+		Game.client.onFailed(showError);
 
 		super();
+		battlePlayer = new MatchBattlePlayer(() -> Game.match, stage, groundSprites, finishBattle);
 		showMenu(false);
-
-		buildShop(shopLayout);
-		buildBench(benchLayout);
-		rebuildGround();
-		startRound();
+		setTime(Game.match.timer);
+		refreshMatch();
 	}
 
 	public function setRound(round:Int)
@@ -82,18 +68,28 @@ class MatchScreen extends Screen {
 	}
 
 	function buyUnit(i:Int) {
-		if (Game.match.buy(i) != null)
-			refreshPlayground();
+		if (pendingBuySlot != null || !Game.match.canBuy(i))
+			return;
+
+		final unit:Unit = Game.match.shop[i];
+		pendingBuySlot = i;
+		buildShop(shopLayout);
+		Game.client.placeUnit(unit.type);
 	}
 
 	function takeUnit(i:Int) {
-		if (Game.match.take(i) != null)
+		final unit = Game.match.take(i);
+		if (unit != null) {
+			if (unit.serverId != null)
+				Game.client.moveUnit(unit.serverId, unit.row, Game.match.boardY(unit.column), "board");
 			refreshPlayground();
+		}
 	}
 
 	function sellUnit(i:Int) {
-		if (Game.match.sell(i) != null)
-			refreshPlayground();
+		final unit = i < 0 || i >= Game.match.bench.length ? null : Game.match.bench[i];
+		if (unit?.serverId != null)
+			Game.client.sellUnit(unit.serverId);
 	}
 
 	function rebuildGround() {
@@ -101,8 +97,12 @@ class MatchScreen extends Screen {
 			sprite.destroy();
 		groundSprites.resize(0);
 
-		for (unit in Game.match.ground) {
-			var sprite = new PlaygroundUnit(unit, stage, moveGroundUnit, moveUnitToBench);
+		final battle = Game.match.phase == Battle;
+		final units = battle ? Game.match.battleUnits() : Game.match.ground;
+		for (unit in units) {
+			var sprite = battle
+				? new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {}, _ -> {})
+				: new PlaygroundUnit(unit, stage, moveGroundUnit, commitGroundUnitMove, moveUnitToBench);
 			stage.addChild(sprite);
 			sprite.place(unit.row, unit.column);
 			groundSprites.push(sprite);
@@ -116,130 +116,106 @@ class MatchScreen extends Screen {
 		rebuildGround();
 	}
 
-	function moveGroundUnit(unit:Unit, row:Int, column:Int):Bool
-		return Game.match.moveGroundUnit(unit, row, column);
-
-	function moveUnitToBench(unit:Unit):Void {
-		if (Game.match.moveToBench(unit))
-			refreshPlayground();
-	}
-
-	function startRound() {
-		if (!Game.match.startRound())
-			return;
+	function refreshMatch() {
 		setRound(Game.match.round);
 		setPhase(Game.match.phase);
 		setHealth();
-		setTimer(preparationTime);
 		refreshPlayground();
 	}
 
-	function setTimer(seconds:Int) {
-		roundTimer?.stop();
-		timeLeft = seconds;
-		setTime(timeLeft);
-		roundTimer = Timer.set(tickTimer, 1.0);
+	function moveGroundUnit(unit:Unit, row:Int, column:Int):Bool {
+		return Game.match.moveGroundUnit(unit, row, column);
 	}
 
-	function tickTimer() {
-		if (Game.match.phase != Preparation)
-			return;
-		setTime(--timeLeft);
-		if (timeLeft <= 0)
-			submitPlacement();
-		else
-			roundTimer = Timer.set(tickTimer, 1.0);
+	function commitGroundUnitMove(unit:Unit):Void {
+		if (unit.serverId != null)
+			Game.client.moveUnit(unit.serverId, unit.row, Game.match.boardY(unit.column), "board");
 	}
 
-	function submitPlacement() {
-		if (Game.match.phase != Preparation)
-			return;
-		roundTimer?.stop();
-		final placement = Game.match.submitPlacement();
-		if (placement == null)
-			return;
-		setPhase(Game.match.phase);
-		setTimeText("...");
-		refreshPlayground();
-		Game.client.requestRound(placement);
-	}
-
-	function onRoundReady(response:MatchRoundResponse) {
-		if (!Game.match.beginBattle())
-			return;
-		setPhase(Game.match.phase);
-		setTimeText("");
-		refreshPlayground();
-		playBattle(response.battle, () -> finishRound(response.result));
-	}
-
-	function playBattle(battle:MatchBattle, done:Void->Void) {
-		var pending = 0;
-		for (timeline in battle) {
-			pending++;
-			playTimeline(timeline, timeline.actions.copy(), () -> if (--pending == 0) done());
+	function moveUnitToBench(unit:Unit):Void {
+		if (Game.match.moveToBench(unit)) {
+			if (unit.serverId != null)
+				Game.client.moveUnit(unit.serverId, Game.match.benchSlot(unit), 0, "bench");
+			refreshPlayground();
 		}
-		if (pending == 0)
-			Timer.set(done, 0.25);
 	}
 
-	function playTimeline(timeline:UnitTimeline, actions:Array<Action>, done:Void->Void):Void {
-		final action = actions.shift();
-		if (action == null) {
-			done();
-			return;
-		}
-
-		final sprite = action.id == Spawn ? ensureBattleSprite(timeline, action) : findGroundSprite(timeline.id);
-		if (sprite == null) {
-			Timer.set(() -> playTimeline(timeline, actions, done), Math.max(0.01, action.duration));
-			return;
-		}
-
-		sprite.playAction(action, () -> playTimeline(timeline, actions, done));
-	}
-
-	function ensureBattleSprite(timeline:UnitTimeline, action:Action):PlaygroundUnit {
-		final found = findGroundSprite(timeline.id);
-		if (found != null)
-			return found;
-
-		final side = timeline.side ?? 1;
-		final row = action.row ?? 0;
-		final column = action.column ?? (side == 0 ? 0 : Match.columns - 1);
-		final unit = Unit.create(cast(timeline.type ?? 0), timeline.level ?? 1);
-		unit.matchId = timeline.id;
-		unit.row = row;
-		unit.column = column;
-
-		final sprite = new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {});
-		stage.addChild(sprite);
-		sprite.place(row, column);
-		groundSprites.push(sprite);
-		return sprite;
-	}
-
-	function findGroundSprite(id:Int):Null<PlaygroundUnit> {
-		for (sprite in groundSprites)
-			if (sprite.unit.matchId == id)
-				return sprite;
-		return null;
-	}
-
-	function finishRound(result:MatchRoundResult) {
-		if (!Game.match.finishRound(result))
-			return;
-		setPhase(Game.match.phase);
-		setHealth();
-		refreshPlayground();
+	function finishBattle(playerHealth:Int, opponentHealth:Int) {
+		Game.match.finishServerBattle(playerHealth, opponentHealth);
+		refreshMatch();
 
 		if (Game.match.winner != null)
 			showMatchWinner();
-		else
-			nextRoundTimer = Timer.set(() -> {
-				if (Game.match.nextRound())
-					startRound();
-			}, 2.0);
+	}
+
+	function onGameEvent(event:Dynamic) {
+		switch event.type {
+			case "game_state":
+				pendingBuySlot = null;
+				Game.match.syncGameState(event.state);
+				setTime(Game.match.timer);
+				refreshMatch();
+			case "planning_phase_start":
+				Game.match.beginServerPlanning(event.round);
+				Game.match.timer = event.time_left;
+				setTime(Game.match.timer);
+				refreshMatch();
+			case "timer_update":
+				if (Game.match.phase == Preparation) {
+					Game.match.timer = event.time_left;
+					setTime(Game.match.timer);
+				}
+			case "unit_placed":
+				if (isOwnEvent(event)) {
+					final shopSlot = pendingBuySlot;
+					pendingBuySlot = null;
+					Game.match.applyUnitPlaced(event.unit, event.coins_left, shopSlot);
+					refreshPlayground();
+				}
+			case "auto_merge":
+				final merged = event.merged_unit ?? event.unit;
+				final unitField = event.merged_unit != null ? "merged_unit" : "unit";
+				final sourceIds:Array<String> = event.source_unit_ids ?? event.source_ids;
+				if (merged != null && isOwnEvent(event, unitField)) {
+					final shopSlot = pendingBuySlot;
+					pendingBuySlot = null;
+					Game.match.applyAutoMerge(merged, event.coins_left, sourceIds, shopSlot);
+					refreshPlayground();
+				}
+			case "unit_moved":
+				if (event.player == Game.player.nickname && Game.match.applyUnitMoved(event.unit_id, event.x, event.y, event.location))
+					refreshPlayground();
+			case "unit_sold":
+				if (event.player == Game.player.nickname && Game.match.applyUnitSold(event.unit_id, event.coins_left))
+					refreshPlayground();
+			case "battle_phase_start":
+				battlePlayer.reset();
+				Game.match.beginServerBattle();
+				Game.match.round = event.round;
+				setTimeText("");
+				refreshMatch();
+			case "battle_events":
+				battlePlayer.play(BattleEvents.normalize(event, Game.match));
+			case "battle_phase_end":
+				final ownHp = Game.match.location == 0 ? event.player1_hp : event.player2_hp;
+				final enemyHp = Game.match.location == 0 ? event.player2_hp : event.player1_hp;
+				battlePlayer.end(ownHp, enemyHp);
+			case "game_over":
+				Game.match.winner = event.winner == Game.player.nickname ? 0 : event.winner == "draw" ? null : 1;
+				if (event.winner == "draw")
+					GameUI.showPopup(GameUI.colors.yellow, "DRAW", false, () -> Game.state.goto(GameState.main));
+				else
+					showMatchWinner();
+			default:
+		}
+	}
+
+	function isOwnEvent(event:Dynamic, unitField:String = "unit"):Bool {
+		if (event.player == Game.player.nickname)
+			return true;
+
+		final unit:Dynamic = Reflect.field(event, unitField);
+		return unit != null && unit.owner == Game.player.nickname;
 	}
 
 	function showMatchWinner() {
@@ -247,7 +223,14 @@ class MatchScreen extends Screen {
 		function toMain() {
 			Game.state.goto(GameState.main);
 		}
-		GameUI.showPopup(GameUI.colors.green, "WINNER: " + name, false, toMain, toMain);
+		GameUI.showPopup(GameUI.colors.green, "WINNER: " + name, false, toMain);
+	}
+
+	function showError(message:String) {
+		pendingBuySlot = null;
+		if (Game.match != null)
+			refreshPlayground();
+		GameUI.showPopup(GameUI.colors.red, message, false, () -> {});
 	}
 
 	@:ui.markup override function markup() {
@@ -323,30 +306,25 @@ class MatchScreen extends Screen {
 
 		for (i in 0...Game.match.shop.length) {
 			var unit:Unit = Game.match.shop[i];
-			var canBuy = Game.match.canBuy(i);
-			var color = Game.match.willBuyMerge(i) ? GameUI.colors.yellow : GameUI.colors.cyan;
+			var canBuy = pendingBuySlot == null && Game.match.canBuy(i);
 
-			@markup(GameWidgets.button(color, "$" + unit.price)) {
+			@markup(GameWidgets.unitSlot(GameUI.colors.cyan, "$" + unit.price)) {
 				$isEnabled = canBuy;
 				$opacity = canBuy ? 1.0 : 0.5;
-				$layout.alignment = AlignCenter;
-				$layout.fillWidth = true;
-				$layout.fillHeight = true;
-				$layout.minimumWidth = 100;
-				$layout.maximumWidth = 200;
-				$layout.minimumHeight = 100;
-				$layout.maximumHeight = 200;
 				$onMousePressed(_->buyUnit(i));
 
 				var label = cast($findChild("label"), s.ui.elements.Label);
-				label.margins = 15;
+				label.margins = 0;
 				label.alignment = AlignHCenter | AlignBottom;
 
-				@image(Image.load(unit.id + "_icon")) {
-					$anchors.fill($parent);
+				@image(Image.load(unit.id.toLowerCase() + "_icon")) {
+					$anchors.left = $parent.left;
+					$anchors.right = $parent.right;
+					$anchors.top = $parent.top;
+					$anchors.bottom = label.top;
 					$fillMode = Contain;
-					$margins = 15;
-					$bottom.margin = 50;
+					$margins = 8;
+					$bottom.margin = 0;
 				}
 			}
 		}
@@ -359,26 +337,19 @@ class MatchScreen extends Screen {
 			var unit:Unit = Game.match.bench[i];
 			var canTake = Game.match.canTake(i);
 
-			@markup(GameWidgets.button(GameUI.colors.cyan, "")) {
+			@markup(GameWidgets.unitSlot(GameUI.colors.cyan, "")) {
 				$acceptedButtons = MouseButton.Left | MouseButton.Right;
 				$opacity = canTake ? 1.0 : 0.5;
-				$layout.alignment = AlignCenter;
-				$layout.fillWidth = true;
-				$layout.fillHeight = true;
-				$layout.minimumWidth = 100;
-				$layout.maximumWidth = 200;
-				$layout.minimumHeight = 100;
-				$layout.maximumHeight = 200;
 				$onMousePressed(b -> switch (b) {
 					case Left: takeUnit(i);
 					case Right: sellUnit(i);
 					default:
 				});
 
-				@image(Image.load(unit.id + "_icon")) {
+				@image(Image.load(unit.id.toLowerCase() + "_icon")) {
 					$anchors.fill($parent);
 					$fillMode = Contain;
-					$margins = 15;
+					$margins = 12;
 				}
 
 				@markup(GameWidgets.label(White, Std.string(unit.level))) {
@@ -435,9 +406,8 @@ class MatchScreen extends Screen {
 	}
 
 	override function destroy() {
-		Game.client.offRoundReady(onRoundReady);
-		roundTimer?.stop();
-		nextRoundTimer?.stop();
+		Game.client.offGameEvent(onGameEvent);
+		Game.client.offFailed(showError);
 		super.destroy();
 	}
 }

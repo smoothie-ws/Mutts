@@ -1,19 +1,16 @@
 package mutts.game;
 
 class MatchPlayground extends UnitCollection {
-	public static inline final rows:Int = 8;
+	public static inline final rows:Int = 7;
 	public static inline final columns:Int = 4;
-	public static inline final maxGroundUnits:Int = 6;
 
 	public function new()
-		super(maxGroundUnits);
+		super(GameConfigs.game.max_units_on_board);
 
-	override public function canAccept(unit:Unit):Bool
-		return canMerge(unit) || units.length < maxUnits && randomFreeCell() != null;
+	override public function canAccept():Bool
+		return units.length < maxUnits && randomFreeCell() != null;
 
 	override public function add(unit:Unit):Bool {
-		if (tryMerge(unit))
-			return true;
 		final cell = randomFreeCell();
 		if (units.length >= maxUnits || cell == null)
 			return false;

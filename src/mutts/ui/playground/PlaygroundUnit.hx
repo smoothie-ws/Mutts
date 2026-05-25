@@ -16,10 +16,13 @@ class PlaygroundUnit extends Interactive {
 	public final unit:Unit;
 	final sprite:Sprite;
 	final moveUnit:Unit->Int->Int->Bool;
+	final commitMove:Unit->Void;
 	final sendToBench:Unit->Void;
 	final mouseMoveHandler:Int->Int->Int->Int->Void;
 
 	var dragging:Bool = false;
+	var dragStartRow:Int = 0;
+	var dragStartColumn:Int = 0;
 	var lastRow:Int = -1;
 	var lastColumn:Int = -1;
 	var lastStageWidth:Float = -1.0;
@@ -32,11 +35,12 @@ class PlaygroundUnit extends Interactive {
 	var scaleAnimation:Animation;
 	var actionAnimation:Animation;
 
-	public function new(unit:Unit, stage:Stage, moveUnit:Unit->Int->Int->Bool, sendToBench:Unit->Void) {
+	public function new(unit:Unit, stage:Stage, moveUnit:Unit->Int->Int->Bool, commitMove:Unit->Void, sendToBench:Unit->Void) {
 		this.unit = unit;
-		this.sprite = new Sprite(unit.id + "_icon");
+		this.sprite = new Sprite(unit.id.toLowerCase());
 		this.sprite.stage = stage;
 		this.moveUnit = moveUnit;
+		this.commitMove = commitMove;
 		this.sendToBench = sendToBench;
 		this.mouseMoveHandler = updateDragPosition;
 		super();
@@ -45,11 +49,18 @@ class PlaygroundUnit extends Interactive {
 		acceptedButtons = MouseButton.Left | MouseButton.Right;
 
 		onMousePressed(b -> switch (b) {
-			case Left: dragging = true;
+			case Left:
+				dragging = true;
+				dragStartRow = unit.row;
+				dragStartColumn = unit.column;
 			case Right: sendToBench(unit);
 			default:
 		});
-		onMouseReleased(b -> if (b == MouseButton.Left) dragging = false);
+		onMouseReleased(b -> if (b == MouseButton.Left) {
+			dragging = false;
+			if (unit.row != dragStartRow || unit.column != dragStartColumn)
+				commitMove(unit);
+		});
 		s.App.input.mouse.onMoved(mouseMoveHandler);
 
 		onMouseEntered(() -> animateSpriteScale(1.1));
@@ -68,8 +79,8 @@ class PlaygroundUnit extends Interactive {
 			return;
 
 		var point = Match.pick(sprite.stage.screenToWorld(mx, my), MatchPlayground.columns);
-		if (point != null && moveUnit(unit, point.row, point.column))
-			syncFromUnit(true, true);
+		if (point != null && (point.row != unit.row || point.column != unit.column) && moveUnit(unit, point.row, point.column))
+			syncFromUnit(true);
 	}
 
 	function syncFromUnit(force:Bool = false, animate:Bool = false):Void {
@@ -96,9 +107,11 @@ class PlaygroundUnit extends Interactive {
 		moveAnimation?.stop();
 
 		if (animate) {
-			final uiFrom = vec2(x, y), spriteFrom = vec2(spriteCenterX, spriteCenterY);
+			final uiFrom = vec2(x, y);
+			final spriteFrom = vec2(spriteCenterX, spriteCenterY);
 			moveAnimation = new Animation(0.15, t -> {
-				final ui = mix(uiFrom, uiTarget, t), center = mix(spriteFrom, point, t);
+				final ui = mix(uiFrom, uiTarget, t);
+				final center = mix(spriteFrom, point, t);
 				x = ui.x;
 				y = ui.y;
 				spriteCenterX = center.x;
@@ -182,9 +195,9 @@ class PlaygroundUnit extends Interactive {
 				spriteCenterX = from.x;
 				spriteCenterY = from.y;
 			}
-			if (action.id != Death && action.id != Spawn)
-				spriteScale = scaleFrom;
 			if (action.id == Spawn)
+				spriteScale = scaleFrom;
+			else if (action.id != Death)
 				spriteScale = scaleFrom;
 			applySpriteTransform();
 			done();

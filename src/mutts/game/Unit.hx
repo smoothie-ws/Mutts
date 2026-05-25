@@ -1,52 +1,60 @@
 package mutts.game;
 
-enum abstract UnitType(Int) from Int to Int {
-	public static inline final count:Int = 8;
-
-	var ARCHITECT;
-	var BERSERKER;
-	var BULLDOZER;
-	var DRONE;
-	var MEDIC;
-	var PHANTOM;
-	var SNIPER;
-	var TECHNICIAN;
-}
-
 @:forward
 enum abstract Unit(UnitData) from UnitData {
-	static final ids = ["architect", "berserker", "bulldozer", "drone", "medic", "phantom", "sniper", "technician"];
-	static final names = ["Architect", "Berserker", "Bulldozer", "Drone", "Medic", "Phantom", "Sniper", "Technician"];
-
 	@:from
 	public static function get(type:UnitType):Unit
 		return create(type);
 
 	public static function create(type:UnitType, level:Int = 1):Unit {
-		final i:Int = type;
-		if (i < 0 || i >= UnitType.count) {
-			Log.error("Unknown unit type: " + type);
-			return null;
-		}
-		return {matchId: 0, type: type, id: ids[i], name: names[i], price: 100, row: 0, column: 0, level: level, health: 100};
+		final id:String = type;
+		final config = GameConfigs.unit(type);
+		final maxHealth = GameConfigs.unitHealth(type, level);
+		return {
+			type: type,
+			id: id,
+			name: id.charAt(0).toUpperCase() + id.substr(1),
+			price: config.cost,
+			row: 0,
+			column: 0,
+			level: level,
+			health: maxHealth,
+			maxHealth: maxHealth,
+			attack: config.attack,
+			attackSpeed: config.attack_speed,
+			range: config.attack_range,
+			moveSpeed: config.move_speed,
+			critChance: config.crit_chance,
+			critDamage: config.crit_damage,
+			lastAttackTime: 0.0,
+			location: "board"
+		};
 	}
 
-	public inline function canMergeWith(unit:Unit):Bool
-		return this.type == unit.type && this.level == unit.level;
-
-	public inline function levelUp():Void
-		this.level++;
+	public static function fromBackend(data:mutts.net.Types.BackendUnit):Unit {
+		final unit = create(data.type, data.level);
+		unit.serverId = data.id;
+		unit.owner = data.owner;
+		unit.location = data.location;
+		unit.health = data.hp;
+		unit.maxHealth = data.max_hp;
+		unit.attack = data.attack;
+		unit.attackSpeed = data.attack_speed;
+		unit.range = data.range;
+		unit.moveSpeed = data.move_speed;
+		unit.targetId = data.target_id;
+		unit.lastAttackTime = data.last_attack_time ?? 0.0;
+		unit.critChance = data.crit_chance ?? 0.0;
+		unit.critDamage = data.crit_damage ?? 1.5;
+		return unit;
+	}
 
 	public function getSellPrice():Int {
-		var value = this.price;
-		for (_ in 1...this.level)
-			value *= 2;
-		return Std.int(value / 2);
+		return GameConfigs.sellPrice(this.type, this.level);
 	}
 }
 
 private typedef UnitData = {
-	matchId:Int,
 	type:UnitType,
 	id:String,
 	name:String,
@@ -54,5 +62,17 @@ private typedef UnitData = {
 	row:Int,
 	column:Int,
 	level:Int,
-	health:Int
+	health:Int,
+	maxHealth:Int,
+	attack:Int,
+	attackSpeed:Float,
+	range:Int,
+	moveSpeed:Float,
+	critChance:Float,
+	critDamage:Float,
+	lastAttackTime:Float,
+	location:String,
+	?serverId:String,
+	?owner:String,
+	?targetId:String
 }

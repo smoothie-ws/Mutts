@@ -3,170 +3,355 @@ package mutts.net;
 import haxe.Json;
 import s.Timer;
 import s.net.ws.WebSocketClient;
+import mutts.game.BackendState;
+import mutts.game.GameConfigs;
+import mutts.game.UnitType;
 import mutts.net.Types;
 
-final HOST = "localhost:8080";
-typedef Message = {type:String, data:Dynamic}
+final WS_ORIGIN = "ws://193.53.40.62:8000";
+final BACKEND_ORIGIN = "http://193.53.40.62:8000";
 
 @:allow(Game)
-class GameClient extends WebSocketClient {
-	var mockPlayerHealth:Int = mutts.game.Match.maxHealth;
-	var mockOpponentHealth:Int = mutts.game.Match.maxHealth;
+class GameClient implements s.shortcut.Shortcut {
+	final api:BackendApi;
+	var socket:WebSocketClient;
+	var searchTimer:Timer;
+	var currentUsername:String;
+	var pendingMatch:Match;
+	var didAnnounceMatch:Bool = false;
+	var searchId:Int = 0;
 
-	function new() {
-		super(HOST, false);
-		Timer.set(() -> opened(), 2);
-	}
+	function new()
+		api = new BackendApi(BACKEND_ORIGIN, message -> failed(message));
 
-	@:signal public function auth(progile:PlayerProfile);
-
-	@:signal public function playerStats(stats:PlayerStats);
+	@:signal public function auth(profile:PlayerProfile);
 
 	@:signal public function globalStats(stats:GlobalStats);
 
 	@:signal public function gameReady(match:Match);
 
-	@:signal public function roundReady(response:MatchRoundResponse);
+	@:signal public function gameEvent(event:Dynamic);
 
-	public function requestAuth(login:String, password:String) {
-		// request("auth", {login: login, password: password});
-		Timer.set(() -> text(Json.stringify({
-			type: "auth",
-			data: Json.stringify({nickname: "pisapopa", id: 1})
-		})), 2);
+	@:signal public function failed(message:String);
+
+	public function requestConfigs():Void {
+		final unitConfigs:Array<UnitConfig> = api.get("/unit-configs", false, false);
+		if (unitConfigs != null)
+			GameConfigs.setUnitConfigs(unitConfigs);
+
+		final gameConfig:BackendGameConfig = api.get("/game-config", false, false);
+		if (gameConfig != null)
+			GameConfigs.setGameConfig(gameConfig);
 	}
 
-	public function requestLeague(id:Int) {
-		// request("stats.player", {id: Game.player.id});
+	public function requestAuth(login:String, password:String) {
+		if (!validateCredentials(login, password))
+			return;
 
-		Timer.set(() -> text(Json.stringify({
-			type: "stats.player",
-			data: Json.stringify({
-				id: id,
-				mmr: Std.int(Math.random() * 10000),
-				win_count: Std.int(Math.random() * 1000),
-				lose_count: Std.int(Math.random() * 1000)
-			})
-		})), 2);
+		var params:Map<String, String> = [];
+		params.set("username", login);
+		params.set("password", password);
 
-		Timer.set(() -> text(Json.stringify({
-			type: "stats.global",
-			data: Json.stringify([
-				{id: 0, nickname: "LIZA", mmr: 8000},
-				{id: 1, nickname: "LIZA1", mmr: 7000},
-				{id: 2, nickname: "LIZA2", mmr: 6000},
-				{id: 3, nickname: "LIZA3", mmr: 5000},
-				{id: 4, nickname: "LIZA4", mmr: 4000},
-				{id: 5, nickname: "LIZA5", mmr: 2000},
-			])
-		})), 2);
+		final tokens:AuthTokens = api.postForm("/auth/token", params);
+		if (tokens == null || tokens.access_token == null || tokens.access_token == "")
+			return;
+
+		api.setTokens(tokens);
+
+		final user:BackendUser = api.get("/auth/me", true);
+		if (user != null) {
+			currentUsername = user.username;
+			auth(profile(user));
+			return;
+		}
+
+		currentUsername = login;
+		auth({
+			id: 0,
+			nickname: login
+		});
+	}
+
+	public function requestRegister(login:String, password:String) {
+		if (!validateCredentials(login, password))
+			return;
+
+		final user:BackendUser = api.postJson("/auth/register", {
+			username: login,
+			password: password
+		});
+		if (user != null)
+			requestAuth(login, password);
+	}
+
+	public function requestLeague() {
+		final response:LeaderboardResponse = api.get("/leaderboard");
+		if (response == null || response.players == null)
+			return;
+
+		final stats:GlobalStats = [
+			for (player in response.players)
+				{
+					id: player.id,
+					nickname: player.username,
+					mmr: player.rating
+				}
+		];
+		globalStats(stats);
 	}
 
 	public function requestGame() {
-		// request("game.join", {id: Game.player.id});
-		mockPlayerHealth = mutts.game.Match.maxHealth;
-		mockOpponentHealth = mutts.game.Match.maxHealth;
+		if (!isAuthenticated())
+			return;
 
-		Timer.set(() -> text(Json.stringify({
-			type: "game.ready",
-			data: Json.stringify({
-				opponent: {
-					id: 1,
-					nickname: "Opponent",
-				},
-				location: 0
-			})
-		})), 2);
+		final id = ++searchId;
+		cancelSearchTimer();
+		closeSocket();
+
+		// Join matchmaking queue - backend will automatically create game when 2 players found.
+		joinMatchmaking(id);
 	}
 
-	public function requestRound(units:Array<UnitPlacement>) {
-		// request("game.round", units);
-		Timer.set(() -> roundReady(mockRound(units)), 0.25);
+	public function cancelSearch() {
+		++searchId;
+		cancelSearchTimer();
+		if (api.hasToken())
+			api.postEmptyAsync(api.tokenPath("/matchmaking/leave"), _ -> {}, () -> false);
 	}
 
-	function request(type:String, data:Dynamic)
-		send(Json.stringify({type: type, data: data}));
+	public function closeGame() {
+		++searchId;
+		cancelSearchTimer();
+		closeSocket();
+		pendingMatch = null;
+		didAnnounceMatch = false;
+	}
 
-	function decode<T>(data:Dynamic):T
-		return Std.isOfType(data, String) ? Json.parse(data) : data;
+	public function placeUnit(unitType:UnitType)
+		sendGame({
+			type: "place_unit",
+			unit_type: unitType
+		});
 
-	function mockRound(units:Array<UnitPlacement>):MatchRoundResponse {
-		var playerDamage = 0;
-		for (unit in units)
-			playerDamage += unit.level;
-		final opponentDamage = units.length == 0 ? 2 : Std.random(3);
-		mockOpponentHealth = Std.int(Math.max(0, mockOpponentHealth - playerDamage));
-		mockPlayerHealth = Std.int(Math.max(0, mockPlayerHealth - opponentDamage));
-		final battle:MatchBattle = [];
+	public function moveUnit(unitId:String, x:Int, y:Int, location:String)
+		sendGame({
+			type: "move_unit",
+			unit_id: unitId,
+			x: x,
+			y: y,
+			location: location
+		});
 
-		for (unit in units) {
-			final column = Std.int(Math.min(7, unit.column + 1));
-			battle.push({
-				id: unit.id,
-				side: 0,
-				level: unit.level,
-				actions: [
-					{id: Spawn, duration: 0.1, row: unit.row, column: unit.column},
-					{id: Idle, duration: 0.15},
-					{id: Walk, duration: 0.45, row: unit.row, column: column},
-					{id: Attack, duration: 0.25},
-					{id: Damage, duration: 0.18},
-					{id: Idle, duration: 0.1}
-				]
-			});
-		}
+	public function sellUnit(unitId:String)
+		sendGame({
+			type: "sell_unit",
+			unit_id: unitId
+		});
 
-		for (enemy in [
-			{id: -1, type: 1, level: 1, row: 2, column: 7},
-			{id: -2, type: 6, level: 1, row: 5, column: 7}
-		]) {
-			final death = playerDamage > 0 && enemy.id == -1;
-			final actions = [
-				{id: Spawn, duration: 0.15, row: enemy.row, column: enemy.column},
-				{id: Idle, duration: 0.25},
-				{id: Walk, duration: 0.5, row: enemy.row, column: enemy.column - 2},
-				{id: Attack, duration: 0.25},
-				{id: Damage, duration: 0.2}
-			];
-			if (death)
-				actions.push({id: Death, duration: 0.35});
-			else
-				actions.push({id: Idle, duration: 0.35});
+	function pollMatchStatus(id:Int) {
+		searchTimer = null;
 
-			battle.push({
-				id: enemy.id,
-				type: enemy.type,
-				level: enemy.level,
-				side: 1,
-				actions: actions
-			});
-		}
+		if (!isCurrentSearch(id) || !isAuthenticated())
+			return;
 
-		return {
-			battle: battle,
-			result: {
-				playerHealth: mockPlayerHealth,
-				opponentHealth: mockOpponentHealth,
-				winner: mockOpponentHealth <= 0 ? 0 : mockPlayerHealth <= 0 ? 1 : null
+		api.getAsync(api.tokenPath("/matchmaking/status"), false, (status:QueueStatus) -> {
+			if (!isCurrentSearch(id) || status == null)
+				return;
+
+			if (connectStatusGame(status))
+				return;
+
+			scheduleMatchStatusPoll(id);
+		}, () -> isCurrentSearch(id));
+	}
+
+	function joinMatchmaking(id:Int) {
+		api.postEmptyAsync(api.tokenPath("/matchmaking/join"), (status:QueueStatus) -> {
+			if (!isCurrentSearch(id) || status == null)
+				return;
+
+			if (connectStatusGame(status))
+				return;
+
+			if (isAlreadyInGame(status.message) || isAlreadyInGame(status.status)) {
+				connectExistingMatch(id);
+				return;
 			}
-		}
+
+			scheduleMatchStatusPoll(id);
+		}, () -> false, message -> {
+			if (!isCurrentSearch(id))
+				return;
+
+			if (isAlreadyInGame(message)) {
+				connectExistingMatch(id);
+				return;
+			}
+
+			failed(message);
+		});
 	}
 
-	@:slot(text)
+	function connectExistingMatch(id:Int) {
+		api.getAsync(api.tokenPath("/matchmaking/status"), false, (status:QueueStatus) -> {
+			if (!isCurrentSearch(id) || status == null)
+				return;
+
+			if (connectStatusGame(status))
+				return;
+
+			scheduleMatchStatusPoll(id);
+		}, () -> isCurrentSearch(id));
+	}
+
+	function connectStatusGame(status:QueueStatus):Bool {
+		if (status == null || status.game_id == null || status.game_id == "")
+			return false;
+
+		connectGameSocket(status.game_id);
+		return true;
+	}
+
+	function connectGameSocket(gameId:String) {
+		cancelSearchTimer();
+		closeSocket();
+		pendingMatch = null;
+		didAnnounceMatch = false;
+
+		socket = new WebSocketClient(WS_ORIGIN + "/ws/game/" + gameId + "?access_token=" + api.encodedToken(), "GAME", false);
+		socket.onText(processText);
+		socket.connect();
+	}
+
+	function sendGame(event:Dynamic) {
+		if (socket == null || !socket.running) {
+			failed("Game WebSocket is not connected.");
+			return;
+		}
+
+		socket.send(Json.stringify(event));
+	}
+
+	function receiveGameState(state:BackendGameState) {
+		if (currentUsername == null || state == null)
+			return;
+
+		final isPlayer1 = state.player1.username == currentUsername;
+		final opponent = isPlayer1 ? state.player2.username : state.player1.username;
+		pendingMatch = {
+			opponent: {
+				id: -1,
+				nickname: opponent
+			},
+			location: isPlayer1 ? 0 : 1,
+			state: state
+		};
+
+		if (state.round > 0)
+			announceMatch();
+	}
+
+	function announceMatch() {
+		if (didAnnounceMatch || pendingMatch == null)
+			return;
+
+		didAnnounceMatch = true;
+		gameReady(pendingMatch);
+	}
+
+	function profile(user:BackendUser):PlayerProfile
+		return {
+			id: user.id,
+			nickname: user.username
+		};
+
+	function validateCredentials(login:String, password:String):Bool {
+		if (login.length > 0 && password.length > 0)
+			return true;
+
+		failed("Login and password are required.");
+		return false;
+	}
+
+	function isAuthenticated():Bool {
+		if (api.hasToken())
+			return true;
+
+		failed("Authentication is required.");
+		return false;
+	}
+
+	function isCurrentSearch(id:Int):Bool
+		return searchId == id;
+
+	function isAlreadyInGame(message:Null<String>):Bool {
+		if (message == null)
+			return false;
+		final normalized = message.toLowerCase();
+		return normalized.indexOf("already") != -1 && normalized.indexOf("game") != -1;
+	}
+
+
+	function cancelSearchTimer() {
+		searchTimer?.stop();
+		searchTimer = null;
+	}
+
+	function scheduleMatchStatusPoll(id:Int)
+		searchTimer = Timer.set(() -> pollMatchStatus(id), 1.0);
+
+	function closeSocket() {
+		if (socket == null)
+			return;
+
+		if (socket.running)
+			socket.close();
+		socket = null;
+	}
+
 	function processText(text:String) {
-		var msg:Message = Json.parse(text);
+		var msg:Dynamic = Json.parse(text);
 
 		switch msg.type {
-			case "auth":
-				auth(decode(msg.data));
-			case "stats.player":
-				playerStats(decode(msg.data));
-			case "stats.global":
-				globalStats(decode(msg.data));
-			case "game.ready":
-				gameReady(decode(msg.data));
-			case "game.round":
-				roundReady(decode(msg.data));
+			case "game_state":
+				receiveGameState(msg.state);
+			case "planning_phase_start":
+				ensurePendingMatch();
+				BackendState.apply(pendingState(), msg);
+				announceMatch();
+			case "battle_events":
+				if (msg.state != null)
+					receiveGameState(msg.state);
+				else
+					BackendState.apply(pendingState(), msg);
+			case "game_over":
+				BackendState.apply(pendingState(), msg);
+				closeGame();
+			case "error":
+				failed(Value.errorMessage(msg));
+			default:
+				if (msg.success == false)
+					failed(Value.errorMessage(msg));
+				else
+					BackendState.apply(pendingState(), msg);
 		}
+		gameEvent(msg);
 	}
+
+	function ensurePendingMatch():Void {
+		if (pendingMatch != null)
+			return;
+
+		pendingMatch = {
+			opponent: {
+				id: -1,
+				nickname: "Opponent"
+			},
+			location: 0,
+			state: null
+		};
+	}
+
+	function pendingState():Null<BackendGameState>
+		return pendingMatch?.state;
 }

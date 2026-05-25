@@ -10,7 +10,7 @@ class MainScreen extends Screen {
 			$fillMode = Cover;
 			$anchors.fill($parent);
 
-			@gradient.linear([0xC9000000, 0xB4925714]) {
+			@gradient.linear([0xC9000000, 0xB44B0A16]) {
 				$interpolation = Interpolation.Smoothstep;
 				$anchors.fill($parent);
 			}

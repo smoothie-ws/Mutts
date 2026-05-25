@@ -5,14 +5,13 @@ import s.math.Vec2;
 import s.math.SMath;
 import mutts.game.Unit;
 import mutts.net.Types;
+import mutts.net.Value;
 
-@:allow(mutts.ui.screens.MatchScreen)
 @:allow(mutts.ui.playground.PlaygroundUnit)
 class Match {
-	static inline final shopCount:Int = 5;
-	static inline final benchCount:Int = 4;
-	public static inline final maxHealth:Int = 10;
-	public static inline final rows:Int = 8;
+	static inline final shopCount:Int = 3;
+	public static var maxHealth(get, never):Int;
+	public static inline final rows:Int = 7;
 	public static inline final columns:Int = 8;
 
 	static final points = [
@@ -45,7 +44,9 @@ class Match {
 
 	final groundArea:MatchPlayground;
 	final benchArea:UnitCollection;
-	final available:Array<UnitType> = [];
+	final availableShop:Array<UnitType> = [];
+	var latestState:BackendGameState;
+	var ownUsername:String;
 
 	public final shop:Vector<UnitType> = new Vector(shopCount);
 	public var bench(get, never):Array<Unit>;
@@ -55,50 +56,35 @@ class Match {
 	public final location:Int;
 
 	public var round:Int = 1;
+	public var timer:Int = 0;
 	public var phase:MatchPhase = Preparation;
-	public var balance:Int = 10000;
-	public var playerHealth:Int = maxHealth;
-	public var opponentHealth:Int = maxHealth;
+	public var balance:Int = GameConfigs.game.initial_coins;
+	public var playerHealth:Int = GameConfigs.game.initial_hp;
+	public var opponentHealth:Int = GameConfigs.game.initial_hp;
 	public var winner:Null<Int> = null;
 
-	var nextUnitId:Int = 1;
-
-	public function new(opponent:PlayerProfile, location:Int) {
+	public function new(opponent:PlayerProfile, location:Int, ?state:BackendGameState) {
 		this.opponent = opponent;
 		this.location = location;
 
 		groundArea = new MatchPlayground();
-		benchArea = new UnitCollection(benchCount);
+		benchArea = new UnitCollection(GameConfigs.game.max_units_on_bench);
 
-		for (i in 0...shopCount)
-			shop[i] = i;
-		for (i in shopCount...UnitType.count)
-			available.push(i);
+		for (unit in UnitType.shopPool)
+			availableShop.push(unit);
+		rerollShop();
+
+		if (state != null)
+			syncGameState(state);
 	}
 
 	public function canBuy(i:Int):Bool {
 		final unit = shopUnit(i);
-		return phase == Preparation && unit != null && balance >= unit.price && canPlace(unit);
-	}
-
-	public function willBuyMerge(i:Int):Bool {
-		final unit = shopUnit(i);
-		return unit != null && willAddPurchasedUnitMerge(unit);
+		return phase == Preparation && unit != null && balance >= unit.price && (groundArea.canAccept() || benchArea.canAccept());
 	}
 
 	public function canTake(i:Int):Bool
-		return phase == Preparation && i >= 0 && i < bench.length && groundArea.canAccept(bench[i]);
-
-	public function buy(i:Int):Null<Unit> {
-		final unit = shopUnit(i);
-		if (phase != Preparation || unit == null || balance < unit.price || !addPurchasedUnit(unit))
-			return null;
-
-		unit.matchId = nextUnitId++;
-		balance -= unit.price;
-		rollShop(i);
-		return unit;
-	}
+		return phase == Preparation && i >= 0 && i < bench.length && groundArea.canAccept();
 
 	public function take(i:Int):Null<Unit> {
 		if (!canTake(i))
@@ -115,23 +101,11 @@ class Match {
 		return unit;
 	}
 
-	public function sell(i:Int):Null<Unit> {
-		if (phase != Preparation)
-			return null;
-
-		var unit = benchArea.removeAt(i);
-		if (unit == null)
-			return null;
-
-		balance += unit.getSellPrice();
-		return unit;
-	}
-
 	public function moveGroundUnit(unit:Unit, row:Int, column:Int):Bool
 		return phase == Preparation && groundArea.move(unit, row, column);
 
 	public function moveToBench(unit:Unit):Bool {
-		if (phase != Preparation || !groundArea.contains(unit) || !benchArea.canAccept(unit))
+		if (phase != Preparation || !groundArea.contains(unit) || !benchArea.canAccept())
 			return false;
 
 		groundArea.remove(unit);
@@ -142,40 +116,120 @@ class Match {
 		return false;
 	}
 
-	public function startRound():Bool
-		return phase == Preparation || transition(Preparation, Results);
+	public function beginServerBattle():Void {
+		phase = Battle;
+	}
 
-	public function submitPlacement():Null<Array<UnitPlacement>>
-		return transition(Waiting, Preparation) ? [for (unit in ground) {id: unit.matchId, level: unit.level, row: unit.row, column: unit.column}] : null;
+	public function beginServerPlanning(round:Int):Void {
+		this.round = round;
+		phase = Preparation;
+		winner = null;
+	}
 
-	public function beginBattle():Bool
-		return transition(Battle, Waiting);
+	public function finishServerBattle(playerHealth:Int, opponentHealth:Int):Void {
+		phase = Results;
+		this.playerHealth = playerHealth;
+		this.opponentHealth = opponentHealth;
+		winner = playerHealth <= 0 ? 1 : opponentHealth <= 0 ? 0 : null;
+	}
 
-	public function finishRound(result:MatchRoundResult):Bool {
-		if (!transition(Results, Battle))
+	public function syncGameState(state:BackendGameState):Void {
+		latestState = state;
+		round = state.round;
+		timer = state.timer;
+		phase = state.phase == "battle" ? Battle : Preparation;
+
+		final own = location == 0 ? state.player1 : state.player2;
+		final enemy = location == 0 ? state.player2 : state.player1;
+		ownUsername = own.username;
+		balance = own.coins;
+		playerHealth = own.hp;
+		opponentHealth = enemy.hp;
+		winner = state.winner == null ? null : state.winner == own.username ? 0 : 1;
+
+		groundArea.units.resize(0);
+		benchArea.units.resize(0);
+		for (unit in state.units)
+			if (unit.owner == own.username)
+				placeBackendUnit(unit);
+	}
+
+	public function applyUnitPlaced(unit:BackendUnit, coins:Null<Int>, ?shopSlot:Int):Void {
+		BackendState.upsert(latestState, unit);
+		if (unit.owner != ownUsername)
+			return;
+
+		if (coins != null)
+			balance = coins;
+		placeBackendUnit(unit);
+		if (shopSlot != null)
+			rerollShopSlot(shopSlot);
+	}
+
+	public function applyAutoMerge(unit:BackendUnit, coins:Null<Int>, ?sourceIds:Array<String>, ?shopSlot:Int):Void {
+		BackendState.merge(latestState, unit, sourceIds);
+		if (unit.owner != ownUsername)
+			return;
+
+		if (coins != null)
+			balance = coins;
+		removeMergeSources(unit, sourceIds);
+		placeBackendUnit(unit);
+		if (shopSlot != null)
+			rerollShopSlot(shopSlot);
+	}
+
+	public function applyUnitMoved(unitId:String, x:Int, y:Int, targetLocation:String):Bool {
+		BackendState.move(latestState, unitId, x, y, targetLocation);
+
+		final unit = findByServerId(unitId);
+		if (unit == null)
 			return false;
-		playerHealth = result.playerHealth;
-		opponentHealth = result.opponentHealth;
-		winner = result.winner;
+
+		if (targetLocation == "bench") {
+			groundArea.remove(unit);
+			if (!benchArea.contains(unit))
+				benchArea.units.push(unit);
+			return true;
+		}
+
+		if (targetLocation != "board")
+			return false;
+
+		benchArea.remove(unit);
+		if (!groundArea.contains(unit))
+			groundArea.units.push(unit);
+		unit.row = x;
+		unit.column = location == 0 ? y : y - MatchPlayground.columns;
 		return true;
 	}
 
-	public function nextRound():Bool {
-		if (phase != Results || winner != null)
+	public function applyUnitSold(unitId:String, coins:Int):Bool {
+		BackendState.remove(latestState, unitId);
+		balance = coins;
+		final unit = findByServerId(unitId);
+		if (unit == null)
 			return false;
-		round++;
-		return startRound();
+
+		return groundArea.remove(unit) || benchArea.remove(unit);
 	}
 
-	function transition(to:MatchPhase, from:MatchPhase):Bool {
-		if (phase != from)
-			return false;
-		phase = to;
-		return true;
+	public function boardY(column:Int):Int
+		return location == 0 ? column : column + MatchPlayground.columns;
+
+	public function benchSlot(unit:Unit):Int {
+		final slot = bench.indexOf(unit);
+		return slot < 0 ? 0 : slot;
 	}
 
-	function canPlace(unit:Unit):Bool
-		return groundArea.canAccept(unit) || benchArea.canAccept(unit);
+	public function battleUnit(id:String):Null<Unit>
+		return BackendState.battleUnit(latestState, id, location, ownUsername);
+
+	public function battleColumn(unitId:String, column:Int):Int
+		return BackendState.battleColumn(latestState, unitId, column, location, ownUsername);
+
+	public function battleUnits():Array<Unit>
+		return latestState == null ? ground.copy() : BackendState.battleUnits(latestState, location, ownUsername);
 
 	function get_bench():Array<Unit>
 		return benchArea.units;
@@ -186,18 +240,91 @@ class Match {
 	function shopUnit(i:Int):Null<Unit>
 		return i < 0 || i >= shop.length ? null : (shop[i] : Unit);
 
-	function rollShop(i:Int):Void {
-		if (available.length == 0)
-			return;
-		final old = shop[i], next = available[Std.random(available.length)];
-		available.remove(next);
-		available.push(old);
-		shop[i] = next;
+	function rerollShop():Void {
+		for (i in 0...shop.length)
+			rerollShopSlot(i);
 	}
 
-	function addPurchasedUnit(unit:Unit):Bool
-		return groundArea.canAccept(unit) && groundArea.add(unit) || benchArea.canAccept(unit) && benchArea.add(unit);
+	function rerollShopSlot(i:Int):Void {
+		if (i < 0 || i >= shop.length)
+			return;
 
-	function willAddPurchasedUnitMerge(unit:Unit):Bool
-		return groundArea.canMerge(unit) || !groundArea.canAccept(unit) && benchArea.canMerge(unit);
+		final old = shop[i];
+		if (old != null)
+			availableShop.push(old);
+		shop[i] = drawShopUnit();
+	}
+
+	function drawShopUnit():UnitType {
+		if (availableShop.length == 0)
+			for (unit in UnitType.shopPool)
+				availableShop.push(unit);
+		return availableShop.splice(Std.random(availableShop.length), 1)[0];
+	}
+
+	function placeBackendUnit(data:BackendUnit):Void {
+		final old = findByServerId(data.id);
+		if (old != null) {
+			groundArea.remove(old);
+			benchArea.remove(old);
+		}
+
+		final unit = Unit.fromBackend(data);
+		if (data.location == "bench") {
+			benchArea.units.push(unit);
+			return;
+		}
+
+		unit.row = Std.int(Math.floor(data.position_x));
+		unit.column = displayColumn(data);
+		groundArea.units.push(unit);
+	}
+
+	function removeMergeSources(merged:BackendUnit, ?sourceIds:Array<String>):Void {
+		if (sourceIds != null && sourceIds.length > 0) {
+			for (id in sourceIds)
+				removeByServerId(id);
+			return;
+		}
+
+		final sourceLevel = merged.level - 1;
+		if (sourceLevel <= 0)
+			return;
+
+		var remaining = 3;
+		for (units in [groundArea.units, benchArea.units]) {
+			var i = units.length - 1;
+			while (i >= 0 && remaining > 0) {
+				final unit = units[i];
+				if (unit.type == merged.type && unit.level == sourceLevel) {
+					units.splice(i, 1);
+					remaining--;
+				}
+				i--;
+			}
+		}
+	}
+
+	function removeByServerId(id:String):Bool {
+		final unit = findByServerId(id);
+		return unit != null && (groundArea.remove(unit) || benchArea.remove(unit));
+	}
+
+	function findByServerId(id:String):Null<Unit> {
+		for (unit in groundArea.units)
+			if (Value.sameId(unit.serverId, id))
+				return unit;
+		for (unit in benchArea.units)
+			if (Value.sameId(unit.serverId, id))
+				return unit;
+		return null;
+	}
+
+	function displayColumn(data:BackendUnit):Int {
+		final column = Std.int(Math.floor(data.position_y));
+		return BackendState.displayColumn(data.owner, column, location, ownUsername);
+	}
+
+	static function get_maxHealth():Int
+		return GameConfigs.game.initial_hp;
 }

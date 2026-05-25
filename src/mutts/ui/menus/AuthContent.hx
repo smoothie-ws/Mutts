@@ -6,73 +6,74 @@ import s.ui.elements.Interactive;
 
 class AuthContent extends MenuContent {
 	var login:Bool = true;
+	var loginInput:Interactive;
+	var passwordInput:Interactive;
 	var changeModeButton:Interactive;
 	var proceedButton:Interactive;
 
-	public function new()
+	public function new() {
 		super("AUTHORIZATION");
+		Game.client.onFailed(showError);
+	}
 
 	@:ui.markup
 	override function markup() {
-		@row {
-			$height = 100;
-			$alignment = AlignCenter;
-			$anchors.fillWidth($parent);
-
-			@markup(GameWidgets.label(White, "LOGIN")) {
-				$font.size = 24;
-				$width = 200;
-			}
-
-			@rectangle {
-				$height = 50;
-				$width = 200;
-			}
+		loginInput = @markup(GameWidgets.input(GameUI.colors.cyan, "LOGIN")) {
+			$height = 50;
+			$layout.fillWidth = true;
 		}
 
-		@row {
-			$height = 100;
-			$alignment = AlignCenter;
-			$anchors.fillWidth($parent);
-
-			@markup(GameWidgets.label(White, "PASSWORD")) {
-				$font.size = 24;
-				$width = 200;
-			}
-
-			@rectangle {
-				$height = 50;
-				$width = 200;
-			}
+		passwordInput = @markup(GameWidgets.input(GameUI.colors.cyan, "PASSWORD")) {
+			$height = 50;
+			$layout.fillWidth = true;
 		}
 
 		@column {
-			$height = 200;
+			$height = 245;
 			$layout.fillWidth = true;
 			$alignment = AlignTop | AlignHCenter;
 
-			changeModeButton = @markup(GameWidgets.button(GameUI.colors.yellow, "SIGN UP")) {
-				$setScale(0.5);
+			changeModeButton = @markup(GameWidgets.button(GameUI.colors.neonWhite, "SIGN UP")) {
+				$width = 260;
+				$height = 85;
+				cast($findChild("label"), Label).font.size = 26;
 				$layout.alignment = AlignCenter;
 				$onMouseClicked(_ -> toggleMode());
 			}
 
 			proceedButton = @markup(GameWidgets.button(GameUI.colors.cyan, "LOG IN")) {
+				$width = 330;
+				$height = 105;
+				cast($findChild("label"), Label).font.size = 32;
 				$layout.alignment = AlignCenter;
-				$onMouseClicked(b -> Game.client.requestAuth("login", "password"));
+				$onMouseClicked(_ -> proceed());
 			}
 		}
 	}
 
+	function proceed() {
+		final username = getInputText(loginInput);
+		final password = getInputText(passwordInput);
+		if (login)
+			Game.client.requestAuth(username, password);
+		else
+			Game.client.requestRegister(username, password);
+	}
+
+	function getInputText(input:Interactive):String
+		return cast(input.findChild("text"), Label).text;
+
+	function showError(message:String)
+		GameUI.showPopup(GameUI.colors.red, message, false, () -> {});
+
 	function toggleMode() {
-		if (login) {
-			login = false;
-			cast(changeModeButton.findChild("label"), Label).text = "LOG IN";
-			cast(proceedButton.findChild("label"), Label).text = "SIGN UP";
-		} else {
-			login = true;
-			cast(changeModeButton.findChild("label"), Label).text = "SIGN UP";
-			cast(proceedButton.findChild("label"), Label).text = "LOG IN";
-		}
+		login = !login;
+		cast(changeModeButton.findChild("label"), Label).text = login ? "SIGN UP" : "LOG IN";
+		cast(proceedButton.findChild("label"), Label).text = login ? "LOG IN" : "SIGN UP";
+	}
+
+	override function destroy() {
+		Game.client.offFailed(showError);
+		super.destroy();
 	}
 }

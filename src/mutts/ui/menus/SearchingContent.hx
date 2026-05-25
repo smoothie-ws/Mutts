@@ -7,10 +7,8 @@ import mutts.game.Match;
 class SearchingContent extends MenuContent {
 	public function new() {
 		super("SEARCHING...");
-		Game.client.onGameReady(match -> {
-			Game.match = new Match(match.opponent, match.location);
-			Game.state.goto(GameState.play);
-		});
+		Game.client.onGameReady(onGameReady);
+		Game.client.onFailed(showError);
 		Game.client.requestGame();
 	}
 
@@ -21,7 +19,24 @@ class SearchingContent extends MenuContent {
 
 			@element {}
 			@markup(GameWidgets.loading(GameUI.colors.cyan)) {}
-			@markup(GameWidgets.button(GameUI.colors.red, "CANCEL")) $layout.alignment = AlignCenter;
+				@markup(GameWidgets.button(GameUI.colors.red, "CANCEL")) {
+					$layout.alignment = AlignCenter;
+					$onMouseClicked(_ -> Game.state.goto(GameState.main));
+				}
 		}
+	}
+
+	function onGameReady(match:mutts.net.Types.Match) {
+		Game.match = new Match(match.opponent, match.location, match.state);
+		Game.state.goto(GameState.play);
+	}
+
+	function showError(message:String)
+		GameUI.showPopup(GameUI.colors.red, message, false, () -> Game.state.goto(GameState.main));
+
+	override function destroy() {
+		Game.client.offGameReady(onGameReady);
+		Game.client.offFailed(showError);
+		super.destroy();
 	}
 }
