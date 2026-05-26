@@ -9,8 +9,6 @@ class SearchingContent extends MenuContent {
 		super("SEARCHING...");
 		Game.client.onGameReady(onGameReady);
 		Game.client.onFailed(showError);
-		Game.client.onGameReady(onGameReady);
-		Game.client.onFailed(showError);
 		Game.client.requestGame();
 	}
 

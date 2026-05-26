@@ -54,7 +54,7 @@ class GameWidgets implements Markup {
 			Animation.mix(0.0, 1.0, 0.15, x -> $opacity = x).start();
 
 			@rectangle {
-				$color = 0xFF180D05;
+				$color = 0xFF180508;
 				$radius = 0;
 				$height = 350;
 				$anchors.fillWidth($parent);
@@ -171,77 +171,36 @@ class GameWidgets implements Markup {
 			$cursor = Pointer;
 
 			var hovered = new s.shortcut.signals.Signal<Bool->Void>();
-			hovered.connect(b -> s.Animation.mix($scaleX, b ? 1.1 : 1, 0.1, x -> $setScale(x)).start());
+
+			$onMouseEntered(() -> hovered(true));
+			$onMouseExited(() -> hovered(false));
 
 			@image(s.assets.Image.load("frame")) {
 				$anchors.fill($parent);
+				$opacity = 0.75;
 				$color = color;
 				$sampling = Trilinear;
 				$fillMode = Cover;
+
+				hovered.connect(b -> s.Animation.mix($opacity, b ? 1.0 : 0.75, 0.1, x -> $opacity = x).start());
+
+				@image(s.assets.Image.load("frame_corners")) {
+					$anchors.fill($parent);
+					$sampling = Trilinear;
+					$fillMode = Cover;
+					$setScale(1.1);
+					$opacity = 0.0;
+					$color = color;
+
+					hovered.connect(b -> s.Animation.mix($scaleX, b ? 1 : 1.1, 0.1, x -> $setScale(x)).start());
+					hovered.connect(b -> s.Animation.mix($opacity, b ? 1.0 : 0.0, 0.1, x -> $opacity = x).start());
+				}
 
 				@markup(label(color, text)) "label" = {
 					$anchors.fill($parent);
 					hovered.connect(b -> s.Animation.mixColor($color, b ? s.Color.White : color, 0.25, x -> $color = x).ease(s.Easing.OutCirc).start());
 				}
 			}
-
-			// for (a in [AlignTopLeft, AlignTopRight, AlignBottomRight, AlignBottomLeft]) {
-			//   @image(s.assets.Image.load("frame_corner")) {
-			//     $width = 28;
-			//     $height = 28;
-			//     $color = color;
-
-			//     switch a {
-			//       case AlignTopLeft:
-			//         $rotation = s.math.SMath.radians(-90);
-			//         $anchors.left = $parent.left;
-			//         $anchors.top = $parent.top;
-			//       case AlignTopRight:
-			//         $rotation = s.math.SMath.radians(180);
-			//         $anchors.right = $parent.right;
-			//         $anchors.top = $parent.top;
-			//       case AlignBottomRight:
-			//         $rotation = s.math.SMath.radians(90);
-			//         $anchors.right = $parent.right;
-			//         $anchors.bottom = $parent.bottom;
-			//       default:
-			//         $anchors.left = $parent.left;
-			//         $anchors.bottom = $parent.bottom;
-			//     }
-			//   }
-			// }
-
-			$onMouseEntered(() -> hovered(true));
-			$onMouseExited(() -> hovered(false));
-
-			// @rectangle(radius) {
-			//   $anchors.fill($parent);
-			//   $color = Black;
-			//   $color.a = 0.35;
-			//   $border.color = color;
-			//   $border.width = 2;
-			//   $border.softness = 2;
-
-			//   final n = 2;
-			//   for (i in 0...n) {
-			//     @rectangle(radius) {
-			//       $color = "transparent";
-			//       $border.color = color;
-			//       $border.color.s = (n - i) / n;
-			//       $border.color.a = 0.75;
-			//       $border.width = 2;
-			//       $border.softness = 5 * (n - i);
-			//       $anchors.fill($parent);
-
-			//       hovered.connect(b -> s.Animation.mix($border.width, b ? 5.0 : 2.0, 0.5, x -> $border.width = x).ease(s.Easing.OutElastic).start());
-			//     }
-			//   }
-
-			//   @markup(label(color, text)) "label" = {
-			//     $anchors.fill($parent);
-			//     hovered.connect(b -> s.Animation.mixColor($color, b ? s.Color.White : color, 0.25, x -> $color = x).ease(s.Easing.OutCirc).start());
-			//   }
-			// }
 		}
 	}
 
@@ -262,10 +221,25 @@ class GameWidgets implements Markup {
 
 			@image(s.assets.Image.load("frame_square")) {
 				$anchors.fill($parent);
+				$opacity = 0.75;
 				$color = color;
-				$margins = -5;
+				$margins = -15;
 				$sampling = Trilinear;
 				$fillMode = Cover;
+
+				hovered.connect(b -> s.Animation.mix($opacity, b ? 1.0 : 0.75, 0.1, x -> $opacity = x).start());
+
+				@image(s.assets.Image.load("frame_square_corners")) {
+					$anchors.fill($parent);
+					$sampling = Trilinear;
+					$fillMode = Cover;
+					$setScale(1.1);
+					$opacity = 0.0;
+					$color = color;
+
+					hovered.connect(b -> s.Animation.mix($scaleX, b ? 1 : 1.1, 0.1, x -> $setScale(x)).start());
+					hovered.connect(b -> s.Animation.mix($opacity, b ? 1.0 : 0.0, 0.1, x -> $opacity = x).start());
+				}
 			}
 
 			@markup(label(color, text)) "label" = {

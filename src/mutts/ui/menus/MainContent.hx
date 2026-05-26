@@ -4,12 +4,12 @@ import mutts.GameState;
 
 class MainContent extends MenuContent {
 	public function new()
-		super("MAIN");
+		super(Game.player.nickname);
 
 	@:ui.markup
 	override function markup() {
 		@column {
-			$spacing = 25;
+			$spacing = 0;
 			$alignment = AlignCenter;
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
@@ -18,28 +18,28 @@ class MainContent extends MenuContent {
 				{
 					title: "PLAY",
 					width: 400,
-					height: 100,
+					height: 115,
 					color: GameUI.colors.green,
 					state: GameState.searching
 				},
 				{
 					title: "LEAGUE",
 					width: 350,
-					height: 75,
+					height: 115,
 					color: GameUI.colors.cyan,
 					state: GameState.league
 				},
 				{
 					title: "SETTINGS",
 					width: 350,
-					height: 75,
+					height: 115,
 					color: GameUI.colors.cyan,
 					state: GameState.settings
 				},
 				{
 					title: "EXIT",
 					width: 350,
-					height: 75,
+					height: 115,
 					color: GameUI.colors.red,
 					state: GameState.exit
 				}

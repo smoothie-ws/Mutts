@@ -47,10 +47,10 @@ class LeagueContent extends MenuContent {
 		for (i in 0...stats.length) {
 			var stat = stats[i];
 			@markup(GameWidgets.panel(switch i {
-				case 0: 0xFF00F0FF;
-				case 1: 0xFF9FD8FF;
-				case 2: 0xFF2DD4BF;
-				default: 0xFFFFFFFF;
+				case 0: 0xFF2CE2BE;
+				case 1: 0xFF1CBCC8;
+				case 2: 0xFF1B8591;
+				default: 0xFF0F4867;
 			})) {
 				$height = 75;
 				$anchors.fillWidth($parent);

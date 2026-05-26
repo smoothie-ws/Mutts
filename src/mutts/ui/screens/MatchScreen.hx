@@ -358,18 +358,15 @@ class MatchScreen extends Screen {
 					$font.size = 18;
 					$anchors.left = $parent.left;
 					$anchors.top = $parent.top;
-					$left.margin = 10;
-					$top.margin = 10;
 				}
 
 				@markup(GameWidgets.label(GameUI.colors.green, "$" + unit.getSellPrice())) {
 					$width = 75;
 					$height = 35;
 					$font.size = 18;
+					$alignment = AlignRightCenter;
 					$anchors.right = $parent.right;
 					$anchors.top = $parent.top;
-					$right.margin = 10;
-					$top.margin = 10;
 				}
 			}
 		}

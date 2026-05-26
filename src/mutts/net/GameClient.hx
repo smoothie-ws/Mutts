@@ -248,8 +248,7 @@ class GameClient implements s.shortcut.Shortcut {
 			state: state
 		};
 
-		if (state.round > 0)
-			announceMatch();
+		announceMatch();
 	}
 
 	function announceMatch() {
