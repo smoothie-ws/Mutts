@@ -1,5 +1,7 @@
 package mutts.ui.menus;
 
+import mutts.GameState;
+import s.ui.elements.Label;
 import s.ui.positioners.Column;
 import mutts.net.Types;
 
@@ -28,6 +30,16 @@ class LeagueContent extends MenuContent {
 			globalColumn = @column {
 				$spacing = 10;
 				$anchors.fill($parent);
+				$bottom.margin = 100;
+			}
+
+			@markup(GameWidgets.button(GameUI.colors.green, "RETURN")) {
+				$width = 300;
+				$height = 70;
+				$anchors.hCenter = $parent.hCenter;
+				$anchors.bottom = $parent.bottom;
+				cast($findChild("label"), Label).font.size = 24;
+				$onMouseClicked(_ -> Game.state.goto(GameState.main));
 			}
 		}
 	}

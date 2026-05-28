@@ -49,24 +49,28 @@ class PlaygroundPlayerCard extends Element {
 
 	@:ui.markup
 	override function markup() {
-		$height = 100;
-		$width = 500;
+		$height = 150;
+		$width = 480;
 
-		@markup(GameWidgets.panel(color)) {
+		@image(s.assets.Image.load("frame")) {
 			$anchors.fill($parent);
+			$opacity = 0.75;
+			$color = color;
+			$sampling = Trilinear;
+			$fillMode = Cover;
 
 			@icon(s.assets.Image.load("player_icon" + num)) {
 				$color = color;
 				$sampling = Trilinear;
-				$width = $height = 70;
-				$x = direction.matches(LeftToRight) ? 12 : 418;
-				$y = 15;
+				$width = $height = 64;
+				$x = direction.matches(LeftToRight) ? 22 : 374;
+				$y = 23;
 			}
 
 			@layout.column {
-				$x = direction.matches(LeftToRight) ? 96 : 12;
-				$y = 18;
-				$width = 392;
+				$x = direction.matches(LeftToRight) ? 96 : 24;
+				$y = 24;
+				$width = 340;
 				$height = 64;
 				$spacing = 7;
 
@@ -83,13 +87,13 @@ class PlaygroundPlayerCard extends Element {
 						}
 
 						healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
-							$width = 110;
+							$width = 80;
 							$font.size = 18;
 							$alignment = AlignRight | AlignVCenter;
 						}
 					} else {
 						healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
-							$width = 110;
+							$width = 80;
 							$font.size = 18;
 							$alignment = AlignLeft | AlignVCenter;
 						}

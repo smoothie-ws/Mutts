@@ -259,7 +259,7 @@ class MatchScreen extends Screen {
 			$padding = Game.settings.interfacePadding;
 
 			@layout.row {
-				$height = 100;
+				$height = 130;
 				$layout.fillWidth = true;
 				$layout.alignment = AlignHCenter | AlignTop;
 				$spacing = 25;
