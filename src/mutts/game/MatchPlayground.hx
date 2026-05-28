@@ -3,9 +3,14 @@ package mutts.game;
 class MatchPlayground extends UnitCollection {
 	public static inline final rows:Int = 7;
 	public static inline final columns:Int = 4;
+	final minColumn:Int;
+	final maxColumn:Int;
 
-	public function new()
+	public function new(minColumn:Int, maxColumn:Int) {
 		super(GameConfigs.game.max_units_on_board);
+		this.minColumn = minColumn;
+		this.maxColumn = maxColumn;
+	}
 
 	override public function canAccept():Bool
 		return units.length < maxUnits && randomFreeCell() != null;
@@ -39,7 +44,7 @@ class MatchPlayground extends UnitCollection {
 	function randomFreeCell():Null<{row:Int, column:Int}> {
 		final cells = [
 			for (row in 0...rows)
-				for (column in 0...columns)
+				for (column in minColumn...maxColumn + 1)
 					if (getAt(row, column) == null)
 						{row: row, column: column}
 		];
@@ -47,5 +52,5 @@ class MatchPlayground extends UnitCollection {
 	}
 
 	function isValidCell(row:Int, column:Int):Bool
-		return row >= 0 && row < rows && column >= 0 && column < columns;
+		return row >= 0 && row < rows && column >= minColumn && column <= maxColumn;
 }

@@ -37,6 +37,13 @@ class MainContent extends MenuContent {
 					state: GameState.settings
 				},
 				{
+					title: "LOG OUT",
+					width: 350,
+					height: 115,
+					color: GameUI.colors.yellow,
+					state: GameState.auth
+				},
+				{
 					title: "EXIT",
 					width: 350,
 					height: 115,
@@ -44,11 +51,15 @@ class MainContent extends MenuContent {
 					state: GameState.exit
 				}
 			]) {
-				@markup(GameWidgets.button(t.color, t.title)) {
+				@markup(GameUI.button(t.color, t.title)) {
 					$width = t.width;
 					$height = t.height;
 					$layout.alignment = AlignCenter;
-					$onMouseClicked(_->Game.state.goto(t.state));
+					$onMouseClicked(_ -> {
+						if (t.state == GameState.auth)
+							Game.logout();
+						Game.state.goto(t.state);
+					});
 				}
 			}
 		}

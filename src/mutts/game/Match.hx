@@ -21,16 +21,20 @@ class Match {
 		]
 	];
 
-	static function pick(pos:Vec2, col:Int = columns) {
+	public static inline function pointAt(row:Float, column:Float):Vec2
+		return vec2((row - column) * 1.55 / 2 - 0.02, (row + column) * 1.15 / 2 - 3.61);
+
+	static function pick(pos:Vec2, minColumn:Int = 0, maxColumn:Int = columns - 1) {
 		inline function dist(p)
 			return distance(pos, p);
 
-		final maxColumn = Std.int(Math.min(col, columns));
 		var p = null;
 		var min = Math.POSITIVE_INFINITY;
+		final fromColumn = Std.int(Math.max(0, minColumn));
+		final toColumn = Std.int(Math.min(columns - 1, maxColumn));
 
 		for (row in 0...rows)
-			for (column in 0...maxColumn) {
+			for (column in fromColumn...toColumn + 1) {
 				var point = points[row][column];
 				var d = dist(point);
 				if (d < min) {
@@ -67,7 +71,7 @@ class Match {
 		this.opponent = opponent;
 		this.location = location;
 
-		groundArea = new MatchPlayground();
+		groundArea = new MatchPlayground(ownBoardMinColumn(), ownBoardMaxColumn());
 		benchArea = new UnitCollection(GameConfigs.game.max_units_on_bench);
 
 		for (unit in UnitType.shopPool)
@@ -200,7 +204,7 @@ class Match {
 		if (!groundArea.contains(unit))
 			groundArea.units.push(unit);
 		unit.row = x;
-		unit.column = location == 0 ? y : y - MatchPlayground.columns;
+		unit.column = displayBoardColumn(y);
 		return true;
 	}
 
@@ -215,7 +219,13 @@ class Match {
 	}
 
 	public function boardY(column:Int):Int
-		return location == 0 ? column : column + MatchPlayground.columns;
+		return serverBoardColumn(column);
+
+	public function ownBoardMinColumn():Int
+		return 0;
+
+	public function ownBoardMaxColumn():Int
+		return columns - 1 - boardColumnOffset();
 
 	public function benchSlot(unit:Unit):Int {
 		final slot = bench.indexOf(unit);
@@ -227,6 +237,9 @@ class Match {
 
 	public function battleColumn(unitId:String, column:Int):Int
 		return BackendState.battleColumn(latestState, unitId, column, location, ownUsername);
+
+	public function battleY(unitId:String, y:Float):Float
+		return BackendState.battleY(latestState, unitId, y, location, ownUsername);
 
 	public function battleUnits():Array<Unit>
 		return latestState == null ? ground.copy() : BackendState.battleUnits(latestState, location, ownUsername);
@@ -324,6 +337,15 @@ class Match {
 		final column = Std.int(Math.floor(data.position_y));
 		return BackendState.displayColumn(data.owner, column, location, ownUsername);
 	}
+
+	function displayBoardColumn(column:Int):Int
+		return location == 0 ? column : columns - 1 - column;
+
+	function serverBoardColumn(column:Int):Int
+		return location == 0 ? column : columns - 1 - column;
+
+	static function boardColumnOffset():Int
+		return Std.int(Math.max(0, Match.columns - MatchPlayground.columns));
 
 	static function get_maxHealth():Int
 		return GameConfigs.game.initial_hp;

@@ -80,25 +80,25 @@ class PlaygroundPlayerCard extends Element {
 					$spacing = 10;
 
 					if (direction.matches(LeftToRight)) {
-						@markup(GameWidgets.label(White, nickname)) {
+						@markup(GameUI.label(White, nickname)) {
 							$font.size = 20;
 							$alignment = AlignLeft | AlignVCenter;
 							$layout.fillWidth = true;
 						}
 
-						healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
+						healthLabel = @markup(GameUI.label(GameUI.colors.green, health + "/" + maxHealth)) {
 							$width = 80;
 							$font.size = 18;
 							$alignment = AlignRight | AlignVCenter;
 						}
 					} else {
-						healthLabel = @markup(GameWidgets.label(GameUI.colors.green, health + "/" + maxHealth)) {
+						healthLabel = @markup(GameUI.label(GameUI.colors.green, health + "/" + maxHealth)) {
 							$width = 80;
 							$font.size = 18;
 							$alignment = AlignLeft | AlignVCenter;
 						}
 
-						@markup(GameWidgets.label(White, nickname)) {
+						@markup(GameUI.label(White, nickname)) {
 							$font.size = 20;
 							$alignment = AlignRight | AlignVCenter;
 							$layout.fillWidth = true;

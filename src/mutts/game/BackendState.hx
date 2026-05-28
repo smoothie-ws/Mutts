@@ -34,8 +34,8 @@ class BackendState {
 					updateCoins(state, playerName(msg, unit), Value.int(msg, ["coins_left", "coins"]));
 				}
 			case "unit_moved":
-				move(state, Value.str(msg, ["unit_id", "id"]), Value.float(msg, ["x", "position_x"]),
-					Value.float(msg, ["y", "position_y"]), Value.str(msg, ["location"]));
+				move(state, Value.str(msg, ["unit_id", "id"]), Value.float(msg, ["x", "position_x"]), Value.float(msg, ["y", "position_y"]),
+					Value.str(msg, ["location"]));
 			case "unit_sold":
 				remove(state, Value.str(msg, ["unit_id", "id"]));
 				updateCoins(state, Value.str(msg, ["player", "owner", "username"]), Value.int(msg, ["coins_left", "coins"]));
@@ -123,8 +123,7 @@ class BackendState {
 	public static function battleUnits(state:Null<BackendGameState>, location:Int, ownUsername:String):Array<Unit>
 		return state == null ? [] : [
 			for (data in state.units)
-				if (data.location != "bench")
-					toDisplayUnit(data, location, ownUsername)
+				if (data.location != "bench") toDisplayUnit(data, location, ownUsername)
 		];
 
 	public static function battleColumn(state:Null<BackendGameState>, id:String, column:Int, location:Int, ownUsername:String):Int {
@@ -132,10 +131,17 @@ class BackendState {
 		return data == null ? column : displayColumn(data.owner, column, location, ownUsername);
 	}
 
+	public static function battleY(state:Null<BackendGameState>, id:String, y:Float, location:Int, ownUsername:String):Float {
+		final data = find(state, id);
+		return data == null ? y : displayPositionY(data.owner, y, location, ownUsername);
+	}
+
 	public static function displayColumn(owner:String, column:Int, location:Int, ownUsername:String):Int {
-		if (owner == ownUsername)
-			return location == 0 ? column : column - MatchPlayground.columns;
-		return location == 0 ? column : column + MatchPlayground.columns;
+		return location == 0 ? column : mutts.game.Match.columns - 1 - column;
+	}
+
+	public static function displayPositionY(owner:String, y:Float, location:Int, ownUsername:String):Float {
+		return location == 0 ? y : mutts.game.Match.columns - y;
 	}
 
 	static function toDisplayUnit(data:BackendUnit, location:Int, ownUsername:String):Unit {

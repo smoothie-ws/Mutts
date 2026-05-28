@@ -17,30 +17,18 @@ class LeagueContent extends MenuContent {
 
 	@:ui.markup
 	override function markup() {
-		@element {
-			$margins = 25;
+		globalColumn = @column {
+			$spacing = 10;
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
-
-			@markup(GameWidgets.loading(GameUI.colors.cyan)) {
-				$anchors.vCenter = $parent.vCenter;
-				Game.client.onGlobalStats(_ -> $destroy());
-			}
-
-			globalColumn = @column {
-				$spacing = 10;
-				$anchors.fill($parent);
-				$bottom.margin = 100;
-			}
-
-			@markup(GameWidgets.button(GameUI.colors.green, "RETURN")) {
-				$width = 300;
-				$height = 70;
-				$anchors.hCenter = $parent.hCenter;
-				$anchors.bottom = $parent.bottom;
-				cast($findChild("label"), Label).font.size = 24;
-				$onMouseClicked(_ -> Game.state.goto(GameState.main));
-			}
+			$bottom.margin = 100;
+		}
+		@markup(GameUI.button(GameUI.colors.green, "RETURN")) {
+			$width = 200;
+			$height = 85;
+			$layout.alignment = AlignCenter;
+			cast($findChild("label"), Label).font.size = 24;
+			$onMouseClicked(_->Game.state.goto(GameState.main));
 		}
 	}
 
@@ -58,7 +46,7 @@ class LeagueContent extends MenuContent {
 
 		for (i in 0...stats.length) {
 			var stat = stats[i];
-			@markup(GameWidgets.panel(switch i {
+			@markup(GameUI.panel(switch i {
 				case 0: 0xFF2CE2BE;
 				case 1: 0xFF1CBCC8;
 				case 2: 0xFF1B8591;
@@ -71,7 +59,7 @@ class LeagueContent extends MenuContent {
 					$anchors.fill($parent);
 
 					for (s in ["#" + Std.string(i + 1), stat.nickname, Std.string(stat.mmr)]) {
-						@markup(GameWidgets.label(White, s)) {
+						@markup(GameUI.label(White, s)) {
 							$font.size = 18;
 							$layout.fillWidth = true;
 							$layout.fillHeight = true;

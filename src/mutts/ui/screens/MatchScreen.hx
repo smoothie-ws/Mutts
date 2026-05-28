@@ -100,9 +100,9 @@ class MatchScreen extends Screen {
 		final battle = Game.match.phase == Battle;
 		final units = battle ? Game.match.battleUnits() : Game.match.ground;
 		for (unit in units) {
-			var sprite = battle
-				? new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {}, _ -> {})
-				: new PlaygroundUnit(unit, stage, moveGroundUnit, commitGroundUnitMove, moveUnitToBench);
+			var sprite = battle ? new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {},
+				_ -> {}) : new PlaygroundUnit(unit, stage, moveGroundUnit, commitGroundUnitMove, moveUnitToBench, Game.match.ownBoardMinColumn(),
+					Game.match.ownBoardMaxColumn());
 			stage.addChild(sprite);
 			sprite.place(unit.row, unit.column);
 			groundSprites.push(sprite);
@@ -195,7 +195,13 @@ class MatchScreen extends Screen {
 				setTimeText("");
 				refreshMatch();
 			case "battle_events":
-				battlePlayer.play(BattleEvents.normalize(event, Game.match));
+				if (event.state != null)
+					Game.match.syncGameState(event.state);
+				final battle = BattleEvents.normalize(event, Game.match);
+				if (battle.length > 0)
+					battlePlayer.play(battle);
+				else
+					battlePlayer.syncPositions();
 			case "battle_phase_end":
 				final ownHp = Game.match.location == 0 ? event.player1_hp : event.player2_hp;
 				final enemyHp = Game.match.location == 0 ? event.player2_hp : event.player1_hp;
@@ -264,28 +270,29 @@ class MatchScreen extends Screen {
 				$layout.alignment = AlignHCenter | AlignTop;
 				$spacing = 25;
 
-				opponentCard = @PlaygroundPlayerCard(Game.match.opponent.nickname, Game.match.opponentHealth, Match.maxHealth, 1, GameUI.colors.red, RightToLeft) {
-					$layout.alignment = AlignCenter;
-				}
+				opponentCard = @PlaygroundPlayerCard(Game.match.opponent.nickname, Game.match.opponentHealth, Match.maxHealth, 1, GameUI.colors.red,
+					RightToLeft) {
+						$layout.alignment = AlignCenter;
+					}
 
 				@column {
 					$width = 500;
 					$alignment = AlignCenter;
 					$layout.alignment = AlignCenter;
 
-					roundLabel = @markup(GameWidgets.label(White, "")) {
+					roundLabel = @markup(GameUI.label(White, "")) {
 						$font.size = 24;
 						$font.bold = true;
 						$anchors.fillWidth($parent);
 					}
 
-					phaseLabel = @markup(GameWidgets.label(White, "")) {
+					phaseLabel = @markup(GameUI.label(White, "")) {
 						$font.size = 48;
 						$font.bold = true;
 						$anchors.fillWidth($parent);
 					}
 
-					timeLabel = @markup(GameWidgets.label(White, "")) {
+					timeLabel = @markup(GameUI.label(White, "")) {
 						$anchors.fillWidth($parent);
 					}
 				}
@@ -308,7 +315,7 @@ class MatchScreen extends Screen {
 			var unit:Unit = Game.match.shop[i];
 			var canBuy = pendingBuySlot == null && Game.match.canBuy(i);
 
-			@markup(GameWidgets.unitSlot(GameUI.colors.cyan, "$" + unit.price)) {
+			@markup(GameUI.unitSlot(GameUI.colors.cyan, "$" + unit.price)) {
 				$isEnabled = canBuy;
 				$opacity = canBuy ? 1.0 : 0.5;
 				$onMousePressed(_->buyUnit(i));
@@ -337,7 +344,7 @@ class MatchScreen extends Screen {
 			var unit:Unit = Game.match.bench[i];
 			var canTake = Game.match.canTake(i);
 
-			@markup(GameWidgets.unitSlot(GameUI.colors.cyan, "")) {
+			@markup(GameUI.unitSlot(GameUI.colors.cyan, "")) {
 				$acceptedButtons = MouseButton.Left | MouseButton.Right;
 				$opacity = canTake ? 1.0 : 0.5;
 				$onMousePressed(b -> switch (b) {
@@ -352,7 +359,7 @@ class MatchScreen extends Screen {
 					$margins = 12;
 				}
 
-				@markup(GameWidgets.label(White, Std.string(unit.level))) {
+				@markup(GameUI.label(White, Std.string(unit.level))) {
 					$width = 35;
 					$height = 35;
 					$font.size = 18;
@@ -360,7 +367,7 @@ class MatchScreen extends Screen {
 					$anchors.top = $parent.top;
 				}
 
-				@markup(GameWidgets.label(GameUI.colors.green, "$" + unit.getSellPrice())) {
+				@markup(GameUI.label(GameUI.colors.green, "$" + unit.getSellPrice())) {
 					$width = 75;
 					$height = 35;
 					$font.size = 18;
@@ -381,7 +388,7 @@ class MatchScreen extends Screen {
 			$layout.alignment = AlignHCenter | AlignBottom;
 		}
 
-		balanceLabel = @markup(GameWidgets.label(White, Std.string(Game.match.balance))) {
+		balanceLabel = @markup(GameUI.label(White, Std.string(Game.match.balance))) {
 			$anchors.vCenter = shopLayout.vCenter;
 			$anchors.left = shopLayout.right;
 			$width = 500;

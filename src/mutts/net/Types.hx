@@ -86,6 +86,8 @@ extern enum abstract ActionType(Int) from Int to Int {
 typedef Action = {
 	id:ActionType,
 	duration:Float,
+	?x:Float,
+	?y:Float,
 	?row:Int,
 	?column:Int
 };

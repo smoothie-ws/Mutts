@@ -31,20 +31,21 @@ class GameState extends FSM {
 	public function new() {
 		super(start);
 
+		Game.client.onAuth(profile -> {
+			Game.player = profile;
+			if (current != main)
+				Game.state.goto(main);
+		});
+
 		// start states
 		start[connecting] = () -> {
 			GameUI.setScreenMenuContent(ConnectingContent);
-			Timer.set(() -> Game.state.goto(auth), 0);
+			Timer.set(() -> if (!Game.tryAutoAuth()) Game.state.goto(auth), 0);
 		}
 
 		// connecting states
-		connecting[auth] = () -> {
-			GameUI.setScreenMenuContent(AuthContent);
-			Game.client.onAuth(profile -> {
-				Game.player = profile;
-				Game.state.goto(main);
-			});
-		}
+		connecting[auth] = () -> GameUI.setScreenMenuContent(AuthContent);
+		connecting[main] = () -> GameUI.setScreenMenuContent(MainContent);
 
 		// auth states
 		auth[main] = () -> GameUI.setScreenMenuContent(MainContent);
@@ -52,6 +53,7 @@ class GameState extends FSM {
 		// main states
 		main[searching] = () -> GameUI.setScreenMenuContent(SearchingContent);
 		main[playMenu] = () -> {};
+		main[auth] = () -> GameUI.setScreenMenuContent(AuthContent);
 
 		main[league] = () -> GameUI.setScreenMenuContent(LeagueContent);
 

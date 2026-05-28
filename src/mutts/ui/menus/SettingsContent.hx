@@ -20,7 +20,7 @@ class SettingsContent extends MenuContent {
 	override function markup() {
 		spacing = 25;
 
-		@markup(GameWidgets.label(White, "Interface")) {
+		@markup(GameUI.label(White, "Interface")) {
 			$layout.fillWidth = true;
 			$font.size = 48;
 			$alignment = AlignBottomCenter;
@@ -47,7 +47,7 @@ class SettingsContent extends MenuContent {
 					callback: Game.setInterfacePadding
 				}
 			]) {
-				@markup(GameWidgets.slider(GameUI.colors.cyan, control.title, control.from, control.to, control.value, control.callback)) {
+				@markup(GameUI.slider(GameUI.colors.cyan, control.title, control.from, control.to, control.value, control.callback)) {
 					$layout.fillWidth = true;
 				}
 			}
@@ -57,7 +57,7 @@ class SettingsContent extends MenuContent {
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
 
-			@markup(GameWidgets.button(GameUI.colors.cyan, "Restore")) {
+			@markup(GameUI.button(GameUI.colors.cyan, "Restore")) {
 				$width = 200;
 				$height = 85;
 				cast($findChild("label"), s.ui.elements.Label).font.size = 26;
@@ -72,7 +72,7 @@ class SettingsContent extends MenuContent {
 
 			@element $layout.fillWidth = true;
 
-			@markup(GameWidgets.button(GameUI.colors.red, "Cancel")) {
+			@markup(GameUI.button(GameUI.colors.red, "Cancel")) {
 				$width = 200;
 				$height = 85;
 				cast($findChild("label"), s.ui.elements.Label).font.size = 26;
@@ -83,7 +83,7 @@ class SettingsContent extends MenuContent {
 				});
 			}
 
-			@markup(GameWidgets.button(GameUI.colors.green, "Save")) {
+			@markup(GameUI.button(GameUI.colors.green, "Save")) {
 				$width = 200;
 				$height = 85;
 				cast($findChild("label"), s.ui.elements.Label).font.size = 26;

@@ -45,25 +45,25 @@ class GameClient implements s.shortcut.Shortcut {
 			GameConfigs.setGameConfig(gameConfig);
 	}
 
-	public function requestAuth(login:String, password:String) {
-		if (!validateCredentials(login, password))
-			return;
+	public function requestAuth(login:String, password:String, reportError:Bool = true):Bool {
+		if (!validateCredentials(login, password, reportError))
+			return false;
 
 		var params:Map<String, String> = [];
 		params.set("username", login);
 		params.set("password", password);
 
-		final tokens:AuthTokens = api.postForm("/auth/token", params);
+		final tokens:AuthTokens = api.postForm("/auth/token", params, reportError);
 		if (tokens == null || tokens.access_token == null || tokens.access_token == "")
-			return;
+			return false;
 
 		api.setTokens(tokens);
 
-		final user:BackendUser = api.get("/auth/me", true);
+		final user:BackendUser = api.get("/auth/me", true, reportError);
 		if (user != null) {
 			currentUsername = user.username;
 			auth(profile(user));
-			return;
+			return true;
 		}
 
 		currentUsername = login;
@@ -71,18 +71,20 @@ class GameClient implements s.shortcut.Shortcut {
 			id: 0,
 			nickname: login
 		});
+		return true;
 	}
 
-	public function requestRegister(login:String, password:String) {
+	public function requestRegister(login:String, password:String):Bool {
 		if (!validateCredentials(login, password))
-			return;
+			return false;
 
 		final user:BackendUser = api.postJson("/auth/register", {
 			username: login,
 			password: password
 		});
 		if (user != null)
-			requestAuth(login, password);
+			return requestAuth(login, password);
+		return false;
 	}
 
 	public function requestLeague() {
@@ -124,6 +126,15 @@ class GameClient implements s.shortcut.Shortcut {
 		++searchId;
 		cancelSearchTimer();
 		closeSocket();
+		pendingMatch = null;
+		didAnnounceMatch = false;
+	}
+
+	public function logout():Void {
+		closeGame();
+		cancelSearch();
+		api.clearTokens();
+		currentUsername = null;
 		pendingMatch = null;
 		didAnnounceMatch = false;
 	}
@@ -265,11 +276,12 @@ class GameClient implements s.shortcut.Shortcut {
 			nickname: user.username
 		};
 
-	function validateCredentials(login:String, password:String):Bool {
+	function validateCredentials(login:String, password:String, reportError:Bool = true):Bool {
 		if (login.length > 0 && password.length > 0)
 			return true;
 
-		failed("Login and password are required.");
+		if (reportError)
+			failed("Login and password are required.");
 		return false;
 	}
 

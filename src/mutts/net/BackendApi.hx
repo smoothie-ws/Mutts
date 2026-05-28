@@ -27,6 +27,12 @@ class BackendApi {
 		tokenType = tokens.token_type ?? "Bearer";
 	}
 
+	public function clearTokens():Void {
+		accessToken = null;
+		refreshToken = null;
+		tokenType = "Bearer";
+	}
+
 	public function hasToken():Bool
 		return accessToken != null && accessToken != "";
 
@@ -48,14 +54,14 @@ class BackendApi {
 			method: Post
 		}), reportError);
 
-	public function postForm<T>(path:String, params:Map<String, String>):Null<T>
+	public function postForm<T>(path:String, params:Map<String, String>, reportError:Bool = true):Null<T>
 		return decode(Http.request(origin, {
 			path: path,
 			method: Post,
 			params: params
-		}));
+		}), reportError);
 
-	public function postJson<T>(path:String, data:Dynamic):Null<T> {
+	public function postJson<T>(path:String, data:Dynamic, reportError:Bool = true):Null<T> {
 		final headers:Map<s.net.http.HttpHeader, String> = [];
 		headers.set("Content-Type", "application/json");
 		return decode(Http.request(origin, {
@@ -63,7 +69,7 @@ class BackendApi {
 			method: Post,
 			headers: headers,
 			data: Json.stringify(data)
-		}));
+		}), reportError);
 	}
 
 	public function getAsync<T>(path:String, authenticated:Bool, done:Null<T>->Void, ?shouldReportError:Void->Bool, ?error:String->Void):Void {

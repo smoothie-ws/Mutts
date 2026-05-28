@@ -18,11 +18,11 @@ class SearchingContent extends MenuContent {
 			$anchors.fill(this);
 
 			@element {}
-			@markup(GameWidgets.loading(GameUI.colors.cyan)) {}
-				@markup(GameWidgets.button(GameUI.colors.red, "CANCEL")) {
-					$layout.alignment = AlignCenter;
-					$onMouseClicked(_ -> Game.state.goto(GameState.main));
-				}
+			@markup(GameUI.loading(GameUI.colors.cyan)) {}
+			@markup(GameUI.button(GameUI.colors.red, "CANCEL")) {
+				$layout.alignment = AlignCenter;
+				$onMouseClicked(_->Game.state.goto(GameState.main));
+			}
 		}
 	}
 

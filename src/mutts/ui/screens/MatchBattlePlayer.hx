@@ -6,6 +6,7 @@ import mutts.game.Match;
 import mutts.game.Unit;
 import mutts.game.UnitType;
 import mutts.net.Types.Action;
+import mutts.net.Types.ActionType;
 import mutts.net.Types.MatchBattle;
 import mutts.net.Types.UnitTimeline;
 import mutts.ui.playground.PlaygroundUnit;
@@ -40,6 +41,24 @@ class MatchBattlePlayer {
 		queue.push(battle);
 		if (!playing)
 			next();
+	}
+
+	public function syncPositions(animate:Bool = true):Void {
+		final current = match();
+		if (current == null)
+			return;
+
+		for (unit in current.battleUnits()) {
+			final sprite = unit.serverId == null ? null : find(unit.serverId);
+			if (sprite == null) {
+				final created = new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {}, _ -> {});
+				stage.addChild(created);
+				created.place(unit.row, unit.column);
+				sprites.push(created);
+			} else {
+				sprite.moveTo(unit.row, unit.column, animate);
+			}
+		}
 	}
 
 	public function end(playerHealth:Int, opponentHealth:Int):Void {
@@ -84,7 +103,13 @@ class MatchBattlePlayer {
 		if (sprite == null)
 			Timer.set(() -> timelineActions(timeline, actions, done), Math.max(0.01, action.duration));
 		else
-			sprite.playAction(action, () -> timelineActions(timeline, actions, done));
+			sprite.playAction(action, () -> {
+				if (action.id == ActionType.Death) {
+					sprites.remove(sprite);
+					sprite.destroy();
+				}
+				timelineActions(timeline, actions, done);
+			});
 	}
 
 	function spriteFor(timeline:UnitTimeline, action:Action):Null<PlaygroundUnit> {

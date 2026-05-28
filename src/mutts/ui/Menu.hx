@@ -56,7 +56,7 @@ class Menu extends RowLayout {
 					$height = 1;
 				}
 
-				titleLabel = @markup(GameWidgets.label(White)) {
+				titleLabel = @markup(GameUI.label(White)) {
 					$font.size = 64;
 					$layout.fillWidth = true;
 					$layout.minimumHeight = 50;

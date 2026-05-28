@@ -37,7 +37,7 @@ class PlaygroundContent extends MenuContent {
 					state: GameState.main
 				}
 			]) {
-				@markup(GameWidgets.button(t.color, t.title)) {
+				@markup(GameUI.button(t.color, t.title)) {
 					$width = t.width;
 					$height = t.height;
 					$layout.alignment = AlignCenter;

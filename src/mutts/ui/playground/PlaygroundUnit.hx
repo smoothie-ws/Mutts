@@ -1,5 +1,6 @@
 package mutts.ui.playground;
 
+import s.Color;
 import s.Easing;
 import s.Animation;
 import s.math.SMath;
@@ -9,16 +10,18 @@ import s.stage2d.Stage;
 import s.stage2d.objects.Sprite;
 import mutts.game.Unit;
 import mutts.game.Match;
-import mutts.game.MatchPlayground;
 import mutts.net.Types.Action;
 
 class PlaygroundUnit extends Interactive {
 	public final unit:Unit;
+
 	final sprite:Sprite;
 	final moveUnit:Unit->Int->Int->Bool;
 	final commitMove:Unit->Void;
 	final sendToBench:Unit->Void;
 	final mouseMoveHandler:Int->Int->Int->Int->Void;
+	final minColumn:Int;
+	final maxColumn:Int;
 
 	var dragging:Bool = false;
 	var dragStartRow:Int = 0;
@@ -35,13 +38,16 @@ class PlaygroundUnit extends Interactive {
 	var scaleAnimation:Animation;
 	var actionAnimation:Animation;
 
-	public function new(unit:Unit, stage:Stage, moveUnit:Unit->Int->Int->Bool, commitMove:Unit->Void, sendToBench:Unit->Void) {
+	public function new(unit:Unit, stage:Stage, moveUnit:Unit->Int->Int->Bool, commitMove:Unit->Void, sendToBench:Unit->Void, ?minColumn:Int = 0,
+			?maxColumn:Int = Match.columns - 1) {
 		this.unit = unit;
 		this.sprite = new Sprite(unit.id.toLowerCase());
 		this.sprite.stage = stage;
 		this.moveUnit = moveUnit;
 		this.commitMove = commitMove;
 		this.sendToBench = sendToBench;
+		this.minColumn = minColumn;
+		this.maxColumn = maxColumn;
 		this.mouseMoveHandler = updateDragPosition;
 		super();
 
@@ -71,14 +77,26 @@ class PlaygroundUnit extends Interactive {
 	public function place(row:Int, column:Int) {
 		unit.row = row;
 		unit.column = column;
+		opacity = 1.0;
+		sprite.opacity = 1.0;
+		sprite.tint = Color.Transparent;
 		syncFromUnit(true);
+	}
+
+	public function moveTo(row:Int, column:Int, animate:Bool = true):Void {
+		if (unit.row == row && unit.column == column)
+			return;
+
+		unit.row = row;
+		unit.column = column;
+		syncFromUnit(true, animate);
 	}
 
 	function updateDragPosition(mx:Int, my:Int, _:Int, _:Int):Void {
 		if (!dragging || sprite.stage == null)
 			return;
 
-		var point = Match.pick(sprite.stage.screenToWorld(mx, my), MatchPlayground.columns);
+		var point = Match.pick(sprite.stage.screenToWorld(mx, my), minColumn, maxColumn);
 		if (point != null && (point.row != unit.row || point.column != unit.column) && moveUnit(unit, point.row, point.column))
 			syncFromUnit(true);
 	}
@@ -101,7 +119,7 @@ class PlaygroundUnit extends Interactive {
 		lastStageHeight = sprite.stage.height;
 		lastStageScale = sprite.stage.stageScale;
 
-		var point = Match.points[unit.row][unit.column];
+		var point = Match.pointAt(unit.row, unit.column);
 		var screenPoint = sprite.stage.worldToScreen(point);
 		var uiTarget = vec2(screenPoint.x - width * 0.5, screenPoint.y - height * 0.5);
 		moveAnimation?.stop();
@@ -109,7 +127,7 @@ class PlaygroundUnit extends Interactive {
 		if (animate) {
 			final uiFrom = vec2(x, y);
 			final spriteFrom = vec2(spriteCenterX, spriteCenterY);
-			moveAnimation = new Animation(0.15, t -> {
+			moveAnimation = new Animation(0.22, t -> {
 				final ui = mix(uiFrom, uiTarget, t);
 				final center = mix(spriteFrom, point, t);
 				x = ui.x;
@@ -155,6 +173,9 @@ class PlaygroundUnit extends Interactive {
 			spriteCenterX = target.point.x;
 			spriteCenterY = target.point.y;
 			spriteScale = 0.0;
+			opacity = 1.0;
+			sprite.opacity = 1.0;
+			sprite.tint = Color.Transparent;
 			applySpriteTransform();
 		}
 
@@ -179,14 +200,27 @@ class PlaygroundUnit extends Interactive {
 				spriteCenterX = from.x + Math.sin(t * Math.PI) * 0.25 * direction;
 				applySpriteTransform();
 			case Damage:
-				spriteScale = scaleFrom * (1.0 + Math.sin(t * Math.PI * 2) * 0.08);
+				final pulse = Math.sin(t * Math.PI);
+				spriteScale = scaleFrom * (1.0 + pulse * 0.08);
+				sprite.tint = s.Color.rgba(1.0, 0.05, 0.05, pulse * 0.75);
 				applySpriteTransform();
 			case Death:
-				spriteScale = scaleFrom * (1.0 - t * 0.5);
+				final fade = 1.0 - t;
+				spriteScale = scaleFrom * fade;
+				opacity = fade;
+				sprite.opacity = fade;
 				applySpriteTransform();
 			case Idle:
 		}).ease(Easing.OutQuint).onCompleted(() -> {
 			if (action.id == Walk && target != null) {
+				if (target.row != null) {
+					unit.row = target.row;
+					lastRow = target.row;
+				}
+				if (target.column != null) {
+					unit.column = target.column;
+					lastColumn = target.column;
+				}
 				x = target.ui.x;
 				y = target.ui.y;
 				spriteCenterX = target.point.x;
@@ -199,26 +233,48 @@ class PlaygroundUnit extends Interactive {
 				spriteScale = scaleFrom;
 			else if (action.id != Death)
 				spriteScale = scaleFrom;
+			if (action.id != Death) {
+				opacity = 1.0;
+				sprite.opacity = 1.0;
+				sprite.tint = Color.Transparent;
+			}
 			applySpriteTransform();
 			done();
 		}).start();
 	}
 
 	function getActionTarget(action:Action) {
-		if (action.row == null || action.column == null || sprite.stage == null)
-			return null;
-		if (action.row < 0 || action.row >= Match.rows || action.column < 0 || action.column >= Match.columns)
+		if (sprite.stage == null)
 			return null;
 
-		final point = Match.points[action.row][action.column];
+		final row = action.row != null ? clampRow(action.row) : null;
+		final column = action.column != null ? clampColumn(action.column) : null;
+		final pointRow = clampRowFloat(row ?? action.x);
+		final pointColumn = clampColumnFloat(column ?? action.y);
+		if (pointRow == null || pointColumn == null)
+			return null;
+
+		final point = Match.pointAt(pointRow, pointColumn);
 		final screenPoint = sprite.stage.worldToScreen(point);
 		return {
-			row: action.row,
-			column: action.column,
+			row: row,
+			column: column,
 			point: point,
 			ui: vec2(screenPoint.x - width * 0.5, screenPoint.y - height * 0.5)
 		};
 	}
+
+	static function clampRow(row:Int):Int
+		return Std.int(Math.max(0, Math.min(Match.rows - 1, row)));
+
+	static function clampColumn(column:Int):Int
+		return Std.int(Math.max(0, Math.min(Match.columns - 1, column)));
+
+	static function clampRowFloat(row:Null<Float>):Null<Float>
+		return row == null ? null : Math.max(0.0, Math.min(Match.rows - 1, row));
+
+	static function clampColumnFloat(column:Null<Float>):Null<Float>
+		return column == null ? null : Math.max(0.0, Math.min(Match.columns - 1, column));
 
 	override function update() {
 		syncFromUnit();
@@ -245,11 +301,11 @@ class PlaygroundUnit extends Interactive {
 			$anchors.right = $parent.right;
 			$top.margin = -15;
 
-			@markup(GameWidgets.label(White, Std.string(unit.level))) {
+			@markup(GameUI.label(White, Std.string(unit.level))) {
 				$width = 25;
 			}
 
-			@markup(GameWidgets.progress(GameUI.colors.green)) {
+			@markup(GameUI.progress(GameUI.colors.green)) {
 				$layout.fillWidth = true;
 			}
 		}
