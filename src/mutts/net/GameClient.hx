@@ -115,6 +115,16 @@ class GameClient implements s.shortcut.Shortcut {
 		joinMatchmaking(id);
 	}
 
+	public function reconnectGame() {
+		if (!isAuthenticated())
+			return;
+
+		final id = ++searchId;
+		cancelSearchTimer();
+		closeSocket();
+		connectExistingMatch(id, "Unable to reconnect to the current match.");
+	}
+
 	public function cancelSearch() {
 		++searchId;
 		cancelSearchTimer();
@@ -196,21 +206,26 @@ class GameClient implements s.shortcut.Shortcut {
 				return;
 
 			if (isAlreadyInGame(message)) {
-				connectExistingMatch(id);
+				connectExistingMatch(id, message);
 				return;
 			}
 
-			failed(message);
+			connectExistingMatch(id, message);
 		});
 	}
 
-	function connectExistingMatch(id:Int) {
+	function connectExistingMatch(id:Int, ?fallbackError:String) {
 		api.getAsync(api.tokenPath("/matchmaking/status"), false, (status:QueueStatus) -> {
 			if (!isCurrentSearch(id) || status == null)
 				return;
 
 			if (connectStatusGame(status))
 				return;
+
+			if (fallbackError != null) {
+				failed(fallbackError);
+				return;
+			}
 
 			scheduleMatchStatusPoll(id);
 		}, () -> isCurrentSearch(id));

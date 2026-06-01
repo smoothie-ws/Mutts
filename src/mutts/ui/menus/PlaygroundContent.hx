@@ -25,14 +25,14 @@ class PlaygroundContent extends MenuContent {
 				{
 					title: "SETTINGS",
 					width: 350,
-					height: 75,
+					height: 100,
 					color: GameUI.colors.cyan,
 					state: GameState.settings
 				},
 				{
 					title: "LEAVE",
 					width: 350,
-					height: 75,
+					height: 100,
 					color: GameUI.colors.red,
 					state: GameState.main
 				}

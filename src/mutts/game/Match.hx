@@ -11,7 +11,7 @@ import mutts.net.Value;
 class Match {
 	static inline final shopCount:Int = 3;
 	public static var maxHealth(get, never):Int;
-	public static inline final rows:Int = 7;
+	public static inline final rows:Int = 8;
 	public static inline final columns:Int = 8;
 
 	static final points = [
@@ -134,7 +134,7 @@ class Match {
 		phase = Results;
 		this.playerHealth = playerHealth;
 		this.opponentHealth = opponentHealth;
-		winner = playerHealth <= 0 ? 1 : opponentHealth <= 0 ? 0 : null;
+		winner = playerHealth <= 0 && opponentHealth <= 0 ? null : playerHealth <= 0 ? 1 : opponentHealth <= 0 ? 0 : null;
 	}
 
 	public function syncGameState(state:BackendGameState):Void {
@@ -149,7 +149,7 @@ class Match {
 		balance = own.coins;
 		playerHealth = own.hp;
 		opponentHealth = enemy.hp;
-		winner = state.winner == null ? null : state.winner == own.username ? 0 : 1;
+		winner = state.winner == null || state.winner == "draw" ? null : state.winner == own.username ? 0 : 1;
 
 		groundArea.units.resize(0);
 		benchArea.units.resize(0);

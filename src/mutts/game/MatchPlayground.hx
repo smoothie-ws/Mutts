@@ -1,7 +1,7 @@
 package mutts.game;
 
 class MatchPlayground extends UnitCollection {
-	public static inline final rows:Int = 7;
+	public static inline final rows:Int = 8;
 	public static inline final columns:Int = 4;
 	final minColumn:Int;
 	final maxColumn:Int;

@@ -4,10 +4,13 @@ import haxe.Constraints;
 import s.Color;
 import s.Easing;
 import s.Animation;
+import s.assets.Image;
 import s.ui.Scene;
 import s.ui.Shapes;
 import s.ui.Markup;
 import s.app.Window;
+import s.stage2d.objects.Sprite;
+import mutts.game.UnitType;
 import mutts.ui.Screen;
 import mutts.ui.screens.MainScreen;
 
@@ -177,9 +180,31 @@ class GameUI implements Markup {
 	}
 
 	@:ui.markup
-	public static function button(color:s.Color, text:String):s.ui.elements.Interactive {
-		var radius = 0;
+	public static function iconButton(color:s.Color, source:String):s.ui.elements.Interactive {
+		@interactive {
+			$width = 225;
+			$height = 75;
+			$cursor = Pointer;
 
+			var hovered = new s.shortcut.signals.Signal<Bool->Void>();
+
+			$onMouseEntered(() -> hovered(true));
+			$onMouseExited(() -> hovered(false));
+
+			@image(s.assets.Image.load(source)) {
+				$anchors.fill($parent);
+				$opacity = 0.75;
+				$color = color;
+				$sampling = Trilinear;
+				$fillMode = Cover;
+
+				hovered.connect(b -> s.Animation.mix($opacity, b ? 1.0 : 0.75, 0.1, x -> $opacity = x).start());
+			}
+		}
+	}
+
+	@:ui.markup
+	public static function button(color:s.Color, text:String):s.ui.elements.Interactive {
 		@interactive {
 			$width = 225;
 			$height = 75;
@@ -374,7 +399,32 @@ class GameUI implements Markup {
 	public static function init(window:Window) {
 		scene = new Scene(window);
 		scene.color = Black;
+		preloadPlaygroundAssets();
 		setScreen(MainScreen);
+	}
+
+	static function preloadPlaygroundAssets():Void {
+		for (asset in [
+			"playground",
+			"background_red",
+			"frame",
+			"frame_corners",
+			"frame_square",
+			"frame_square_corners",
+			"player_icon1",
+			"player_icon2"
+		])
+			Image.load(asset);
+
+		for (type in UnitType.shopPool) {
+			final id:String = type;
+			final asset = id.toLowerCase();
+			Image.load(asset);
+			Image.load(asset + "_icon");
+			new Sprite(asset);
+		}
+
+		new Sprite("playground");
 	}
 
 	public static function showPopup(color:s.Color, text:String, declinable:Bool, accepted:Void->Void, ?declined:Void->Void)

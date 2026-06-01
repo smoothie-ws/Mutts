@@ -51,7 +51,14 @@ class GameState extends FSM {
 		auth[main] = () -> GameUI.setScreenMenuContent(MainContent);
 
 		// main states
-		main[searching] = () -> GameUI.setScreenMenuContent(SearchingContent);
+		main[searching] = () -> {
+			if (Game.match != null) {
+				Game.client.reconnectGame();
+				goto(play);
+				return;
+			}
+			GameUI.setScreenMenuContent(SearchingContent);
+		}
 		main[playMenu] = () -> {};
 		main[auth] = () -> GameUI.setScreenMenuContent(AuthContent);
 
@@ -75,6 +82,7 @@ class GameState extends FSM {
 		}
 
 		// play states
+		play[searching] = () -> GameUI.setScreenMenuContent(SearchingContent);
 		play[playMenu] = () -> GameUI.screen.showMenu(true);
 		play[main] = leaveMatch;
 

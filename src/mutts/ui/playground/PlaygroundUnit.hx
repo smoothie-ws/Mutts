@@ -79,7 +79,7 @@ class PlaygroundUnit extends Interactive {
 		unit.column = column;
 		opacity = 1.0;
 		sprite.opacity = 1.0;
-		sprite.tint = Color.Transparent;
+		sprite.tint = White;
 		syncFromUnit(true);
 	}
 
@@ -175,7 +175,7 @@ class PlaygroundUnit extends Interactive {
 			spriteScale = 0.0;
 			opacity = 1.0;
 			sprite.opacity = 1.0;
-			sprite.tint = Color.Transparent;
+			sprite.tint = White;
 			applySpriteTransform();
 		}
 
@@ -236,7 +236,7 @@ class PlaygroundUnit extends Interactive {
 			if (action.id != Death) {
 				opacity = 1.0;
 				sprite.opacity = 1.0;
-				sprite.tint = Color.Transparent;
+				sprite.tint = White;
 			}
 			applySpriteTransform();
 			done();

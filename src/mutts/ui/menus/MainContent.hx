@@ -14,53 +14,47 @@ class MainContent extends MenuContent {
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
 
-			for (t in [
-				{
-					title: "PLAY",
-					width: 400,
-					height: 115,
-					color: GameUI.colors.green,
-					state: GameState.searching
-				},
-				{
-					title: "LEAGUE",
-					width: 350,
-					height: 115,
-					color: GameUI.colors.cyan,
-					state: GameState.league
-				},
-				{
-					title: "SETTINGS",
-					width: 350,
-					height: 115,
-					color: GameUI.colors.cyan,
-					state: GameState.settings
-				},
-				{
-					title: "LOG OUT",
-					width: 350,
-					height: 115,
-					color: GameUI.colors.yellow,
-					state: GameState.auth
-				},
-				{
-					title: "EXIT",
-					width: 350,
-					height: 115,
-					color: GameUI.colors.red,
-					state: GameState.exit
-				}
-			]) {
-				@markup(GameUI.button(t.color, t.title)) {
-					$width = t.width;
-					$height = t.height;
-					$layout.alignment = AlignCenter;
-					$onMouseClicked(_ -> {
-						if (t.state == GameState.auth)
-							Game.logout();
-						Game.state.goto(t.state);
-					});
-				}
+			@markup(GameUI.button(GameUI.colors.green, "PLAY")) {
+				$width = 400;
+				$height = 115;
+				$layout.alignment = AlignCenter;
+				$onMouseClicked(_->Game.state.goto(GameState.searching));
+			}
+
+			@markup(GameUI.button(GameUI.colors.cyan, "LEAGUE")) {
+				$width = 350;
+				$height = 115;
+				$layout.alignment = AlignCenter;
+				$onMouseClicked(_->Game.state.goto(GameState.league));
+			}
+
+			@markup(GameUI.button(GameUI.colors.cyan, "SETTINGS")) {
+				$width = 350;
+				$height = 115;
+				$layout.alignment = AlignCenter;
+				$onMouseClicked(_->Game.state.goto(GameState.settings));
+			}
+		}
+
+		@layout.row {
+			$anchors.fillWidth($parent);
+			$height = 115;
+
+			@markup(GameUI.iconButton(GameUI.colors.red, "logout")) {
+				$width = 50;
+				$height = 50;
+				$layout.alignment = AlignCenter;
+				$onMouseClicked(_ -> {
+					Game.logout();
+					Game.state.goto(GameState.auth);
+				});
+			}
+
+			@markup(GameUI.iconButton(GameUI.colors.red, "exit")) {
+				$width = 50;
+				$height = 50;
+				$layout.alignment = AlignCenter;
+				$onMouseClicked(_->Game.state.goto(GameState.exit));
 			}
 		}
 	}

@@ -49,7 +49,7 @@ class PlaygroundPlayerCard extends Element {
 
 	@:ui.markup
 	override function markup() {
-		$height = 150;
+		$height = 100;
 		$width = 480;
 
 		@image(s.assets.Image.load("frame")) {
@@ -58,51 +58,44 @@ class PlaygroundPlayerCard extends Element {
 			$color = color;
 			$sampling = Trilinear;
 			$fillMode = Cover;
+		}
+
+		@layout.row {
+			$margins = 10;
+			$left.margin = 65;
+			$right.margin = 65;
+			$anchors.fill($parent);
+			$direction = direction;
 
 			@icon(s.assets.Image.load("player_icon" + num)) {
 				$color = color;
 				$sampling = Trilinear;
 				$width = $height = 64;
-				$x = direction.matches(LeftToRight) ? 22 : 374;
-				$y = 23;
+				$layout.alignment = AlignCenter;
 			}
 
 			@layout.column {
-				$x = direction.matches(LeftToRight) ? 96 : 24;
-				$y = 24;
-				$width = 340;
-				$height = 64;
-				$spacing = 7;
+				$layout.alignment = AlignCenter;
+				$layout.fillWidth = true;
+				$layout.fillHeight = true;
 
 				@layout.row {
+					$direction = direction;
 					$layout.fillWidth = true;
+					$layout.alignment = AlignCenter;
 					$height = 44;
 					$spacing = 10;
 
-					if (direction.matches(LeftToRight)) {
-						@markup(GameUI.label(White, nickname)) {
-							$font.size = 20;
-							$alignment = AlignLeft | AlignVCenter;
-							$layout.fillWidth = true;
-						}
+					@markup(GameUI.label(White, nickname)) {
+						$font.size = 20;
+						$alignment = direction.matches(LeftToRight) ? AlignLeftCenter : AlignRightCenter;
+						$layout.fillWidth = true;
+					}
 
-						healthLabel = @markup(GameUI.label(GameUI.colors.green, health + "/" + maxHealth)) {
-							$width = 80;
-							$font.size = 18;
-							$alignment = AlignRight | AlignVCenter;
-						}
-					} else {
-						healthLabel = @markup(GameUI.label(GameUI.colors.green, health + "/" + maxHealth)) {
-							$width = 80;
-							$font.size = 18;
-							$alignment = AlignLeft | AlignVCenter;
-						}
-
-						@markup(GameUI.label(White, nickname)) {
-							$font.size = 20;
-							$alignment = AlignRight | AlignVCenter;
-							$layout.fillWidth = true;
-						}
+					healthLabel = @markup(GameUI.label(GameUI.colors.green, health + "/" + maxHealth)) {
+						$width = 80;
+						$font.size = 18;
+						$alignment = direction.matches(LeftToRight) ? AlignLeftCenter : AlignRightCenter;
 					}
 				}
 

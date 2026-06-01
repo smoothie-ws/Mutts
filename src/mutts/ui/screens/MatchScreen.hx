@@ -225,6 +225,9 @@ class MatchScreen extends Screen {
 	}
 
 	function showMatchWinner() {
+		if (Game.match.winner == null)
+			return;
+
 		final name = Game.match.winner == 0 ? Game.player.nickname : Game.match.opponent.nickname;
 		function toMain() {
 			Game.state.goto(GameState.main);
@@ -371,7 +374,8 @@ class MatchScreen extends Screen {
 					$width = 75;
 					$height = 35;
 					$font.size = 18;
-					$alignment = AlignRightCenter;
+					$alignment = AlignRightTop;
+					$margins = 10;
 					$anchors.right = $parent.right;
 					$anchors.top = $parent.top;
 				}

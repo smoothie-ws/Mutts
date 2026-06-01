@@ -57,7 +57,7 @@ class GameConfigs {
 			max_units_on_bench: 4,
 			sell_refund_percent: 0.5,
 			planning_time: 20,
-			board_size_x: 7,
+			board_size_x: 8,
 			board_size_y: 8
 		}
 
