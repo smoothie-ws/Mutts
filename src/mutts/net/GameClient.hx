@@ -9,6 +9,8 @@ import mutts.game.GameConfigs;
 import mutts.game.UnitType;
 import mutts.net.Types;
 
+using StringTools;
+
 final WS_ORIGIN = "ws://193.53.40.62:8000";
 final BACKEND_ORIGIN = "http://193.53.40.62:8000";
 
@@ -28,6 +30,8 @@ class GameClient implements s.shortcut.Shortcut {
 	@:signal public function auth(profile:PlayerProfile);
 
 	@:signal public function globalStats(stats:GlobalStats);
+
+	@:signal public function userStatistics(stats:BackendUser);
 
 	@:signal public function gameReady(match:Match);
 
@@ -97,10 +101,31 @@ class GameClient implements s.shortcut.Shortcut {
 				{
 					id: player.id,
 					nickname: player.username,
-					mmr: player.rating
+					mmr: player.rating,
+					win_count: player.win_count,
+					lose_count: player.lose_count,
+					draw_count: player.draw_count
 				}
 		];
 		globalStats(stats);
+	}
+
+	public function requestUserStatistics(player:GlobalStat):Void {
+		if (!isAuthenticated())
+			return;
+
+		final fallback = fallbackStatistics(player);
+		final path = "/user/statistics?username=" + player.nickname.urlEncode();
+		api.getAsync(path, true, (stats:BackendUser) -> {
+			if (stats != null && sameStatisticsUser(stats, player)) {
+				userStatistics(stats);
+				return;
+			}
+
+			api.getAsync("/user/statistics", true, (ownStats:BackendUser) -> {
+				userStatistics(ownStats != null && sameStatisticsUser(ownStats, player) ? ownStats : fallback);
+			}, () -> false);
+		}, () -> false);
 	}
 
 	public function requestGame() {
@@ -290,6 +315,19 @@ class GameClient implements s.shortcut.Shortcut {
 			id: user.id,
 			nickname: user.username
 		};
+
+	function fallbackStatistics(player:GlobalStat):BackendUser
+		return {
+			id: player.id,
+			username: player.nickname,
+			rating: player.mmr,
+			win_count: player.win_count,
+			lose_count: player.lose_count,
+			draw_count: player.draw_count
+		};
+
+	function sameStatisticsUser(stats:BackendUser, player:GlobalStat):Bool
+		return stats.username == player.nickname || stats.id == player.id;
 
 	function validateCredentials(login:String, password:String, reportError:Bool = true):Bool {
 		if (login.length > 0 && password.length > 0)

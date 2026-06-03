@@ -23,7 +23,7 @@ class AuthContent extends MenuContent {
 			$layout.fillWidth = true;
 		}
 
-		passwordInput = @markup(GameUI.input(GameUI.colors.cyan, "PASSWORD")) {
+		passwordInput = @markup(GameUI.input(GameUI.colors.cyan, "PASSWORD", true)) {
 			$height = 50;
 			$layout.fillWidth = true;
 		}
@@ -65,12 +65,15 @@ class AuthContent extends MenuContent {
 	}
 
 	function getInputText(input:Interactive):String
-		return cast(input.findChild("text"), Label).text;
+		return cast(input.findChild("rawText"), Label).text;
 
 	function setInputText(input:Interactive, value:String):Void {
 		final text:Label = cast input.findChild("text");
 		final prompt:Label = cast input.findChild("prompt");
-		text.text = value;
+		final raw:Label = cast input.findChild("rawText");
+		raw.text = value;
+		final masked:Bool = input == passwordInput;
+		text.text = masked ? [for (_ in 0...value.length) "*"].join("") : value;
 		text.isVisible = value.length > 0;
 		prompt.isVisible = value.length == 0;
 	}

@@ -12,6 +12,7 @@ class LeagueContent extends MenuContent {
 		super("LEAGUE");
 
 		Game.client.onGlobalStats(setGlobalStats);
+		Game.client.onUserStatistics(showUserStatistics);
 		Game.client.requestLeague();
 	}
 
@@ -23,6 +24,7 @@ class LeagueContent extends MenuContent {
 			$layout.fillHeight = true;
 			$bottom.margin = 100;
 		}
+
 		@markup(GameUI.button(GameUI.colors.green, "RETURN")) {
 			$width = 200;
 			$height = 85;
@@ -35,10 +37,14 @@ class LeagueContent extends MenuContent {
 	override function destroy() {
 		super.destroy();
 		Game.client.offGlobalStats(setGlobalStats);
+		Game.client.offUserStatistics(showUserStatistics);
 	}
 
 	public function setGlobalStats(stats:GlobalStats)
 		markupGlobalStats(globalColumn, stats);
+
+	function showUserStatistics(stats:BackendUser):Void
+		GameUI.showStatisticsPopup(stats);
 
 	@:ui.markup
 	function markupGlobalStats(stats:GlobalStats) {
@@ -46,23 +52,30 @@ class LeagueContent extends MenuContent {
 
 		for (i in 0...stats.length) {
 			var stat = stats[i];
-			@markup(GameUI.panel(switch i {
-				case 0: 0xFF2CE2BE;
-				case 1: 0xFF1CBCC8;
-				case 2: 0xFF1B8591;
-				default: 0xFF0F4867;
-			})) {
+			@interactive {
+				$cursor = Pointer;
 				$height = 75;
 				$anchors.fillWidth($parent);
 
-				@layout.row {
+				$onMouseClicked(_ -> Game.client.requestUserStatistics(stat));
+
+				@markup(GameUI.panel(switch i {
+					case 0: 0xFF2CE2BE;
+					case 1: 0xFF1CBCC8;
+					case 2: 0xFF1B8591;
+					default: 0xFF0F4867;
+				})) {
 					$anchors.fill($parent);
 
-					for (s in ["#" + Std.string(i + 1), stat.nickname, Std.string(stat.mmr)]) {
-						@markup(GameUI.label(White, s)) {
-							$font.size = 18;
-							$layout.fillWidth = true;
-							$layout.fillHeight = true;
+					@layout.row {
+						$anchors.fill($parent);
+
+						for (s in ["#" + Std.string(i + 1), stat.nickname, Std.string(stat.mmr)]) {
+							@markup(GameUI.label(White, s)) {
+								$font.size = 18;
+								$layout.fillWidth = true;
+								$layout.fillHeight = true;
+							}
 						}
 					}
 				}

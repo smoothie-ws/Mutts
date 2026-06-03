@@ -56,6 +56,7 @@ class MatchBattlePlayer {
 				created.place(unit.row, unit.column);
 				sprites.push(created);
 			} else {
+				sprite.syncStats(unit);
 				sprite.moveTo(unit.row, unit.column, animate);
 			}
 		}
@@ -114,8 +115,14 @@ class MatchBattlePlayer {
 
 	function spriteFor(timeline:UnitTimeline, action:Action):Null<PlaygroundUnit> {
 		final found = find(timeline.id);
-		if (found != null)
+		if (found != null) {
+			final current = match().battleUnit(timeline.id);
+			if (current != null) {
+				final syncHealth = action.id != ActionType.Damage || action.health != null || action.damage == null;
+				found.syncStats(current, syncHealth);
+			}
 			return found;
+		}
 
 		var unit = match().battleUnit(timeline.id);
 		if (unit == null) {

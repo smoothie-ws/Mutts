@@ -70,7 +70,8 @@ typedef BackendGameState = {
 };
 // player
 typedef PlayerProfile = {id:Int, nickname:String};
-typedef GlobalStats = Array<{id:Int, nickname:String, mmr:Int}>;
+typedef GlobalStat = {id:Int, nickname:String, mmr:Int, win_count:Int, lose_count:Int, draw_count:Int};
+typedef GlobalStats = Array<GlobalStat>;
 typedef Match = {opponent:PlayerProfile, location:Int, ?state:BackendGameState};
 
 // battle animation
@@ -89,7 +90,10 @@ typedef Action = {
 	?x:Float,
 	?y:Float,
 	?row:Int,
-	?column:Int
+	?column:Int,
+	?health:Int,
+	?maxHealth:Int,
+	?damage:Int
 };
 
 typedef UnitTimeline = {

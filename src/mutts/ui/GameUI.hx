@@ -11,6 +11,7 @@ import s.ui.Markup;
 import s.app.Window;
 import s.stage2d.objects.Sprite;
 import mutts.game.UnitType;
+import mutts.net.Types.BackendUser;
 import mutts.ui.Screen;
 import mutts.ui.screens.MainScreen;
 
@@ -347,7 +348,7 @@ class GameUI implements Markup {
 	}
 
 	@:ui.markup
-	public static function input(color:s.Color, prompt:String):s.ui.elements.Interactive {
+	public static function input(color:s.Color, prompt:String, ?masked:Bool = false):s.ui.elements.Interactive {
 		@interactive {
 			$cursor = Pointer;
 			$opacity = 0.5;
@@ -371,6 +372,12 @@ class GameUI implements Markup {
 				}
 			}
 
+			var rawLabel = @label("") "rawText" = {
+				$isVisible = false;
+				$width = 0;
+				$height = 0;
+			}
+
 			var underline = cast(textLabel.findChild("underline"), Rectangle);
 
 			$onUpdated(() -> {
@@ -380,17 +387,91 @@ class GameUI implements Markup {
 				}
 			});
 
-			function updateText()
+			function syncDisplayedText() {
+				final raw = rawLabel.text;
+				textLabel.text = masked ? [for (_ in 0...raw.length) "*"].join("") : raw;
 				textLabel.isVisible = !(promptLabel.isVisible = textLabel.text.length == 0);
+			}
 
 			$onKeyboardTyped(c -> {
-				textLabel.text += c;
-				updateText();
+				rawLabel.text += c;
+				syncDisplayedText();
 			});
 			$onKeyboardKeyPressed(Backspace, () -> {
-				textLabel.text = textLabel.text.substr(0, textLabel.text.length - 1);
-				updateText();
+				rawLabel.text = rawLabel.text.substr(0, Std.int(Math.max(0, rawLabel.text.length - 1)));
+				syncDisplayedText();
 			});
+		}
+	}
+
+	@:ui.markup
+	public static function statisticsPopup(stats:BackendUser) {
+		var p = @interactive {
+			$anchors.fill($parent);
+
+			Animation.mix(0.0, 1.0, 0.15, x -> $opacity = x).start();
+
+			@rectangle {
+				$color = 0xFF180508;
+				$radius = 0;
+				$height = 460;
+				$anchors.fillWidth($parent);
+				$anchors.centerIn($parent);
+
+				@markup(panel(GameUI.colors.cyan)) {
+					$left.margin = -50;
+					$right.margin = -50;
+					$anchors.fill($parent);
+
+					@layout.column {
+						$width = 760;
+						$height = 380;
+						$spacing = 8;
+						$anchors.centerIn($parent);
+
+						@markup(label(White, stats.username)) {
+							$width = 760;
+							$height = 70;
+							$font.size = 42;
+							$font.bold = true;
+						}
+
+						final names = ["ID", "RATING", "WINS", "LOSSES", "DRAWS"];
+						final values = [
+							Std.string(stats.id),
+							Std.string(stats.rating),
+							Std.string(stats.win_count),
+							Std.string(stats.lose_count),
+							Std.string(stats.draw_count)
+						];
+						for (i in 0...names.length) {
+							@layout.row {
+								$height = 38;
+								$layout.fillWidth = true;
+
+								@markup(label(GameUI.colors.cyan, names[i])) {
+									$font.size = 20;
+									$alignment = AlignLeftCenter;
+									$layout.fillWidth = true;
+								}
+
+								@markup(label(White, values[i])) {
+									$font.size = 20;
+									$alignment = AlignRightCenter;
+									$layout.fillWidth = true;
+								}
+							}
+						}
+
+						@markup(button(GameUI.colors.green, "OK")) {
+							$width = 220;
+							$height = 75;
+							$layout.alignment = AlignCenter;
+							$onMouseClicked(_ -> p.destroy());
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -429,6 +510,9 @@ class GameUI implements Markup {
 
 	public static function showPopup(color:s.Color, text:String, declinable:Bool, accepted:Void->Void, ?declined:Void->Void)
 		GameUI.popup(scene, color, text, declinable, accepted, declined);
+
+	public static function showStatisticsPopup(stats:BackendUser)
+		GameUI.statisticsPopup(scene, stats);
 
 	@:generic
 	public static function setScreen<T:Constructible<Void->Void> & Screen>(screen:Class<T>, ?callback:Void->Void) {

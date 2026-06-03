@@ -37,13 +37,23 @@ class BattleEvents {
 				case Attack:
 					if (actorId != null)
 						add(timelines, lastTimes, actorId, {id: Attack, duration: duration}, timestamp, item, match);
-					if (targetId != null)
-						add(timelines, lastTimes, targetId, {id: Damage, duration: defaultDuration(Damage)}, timestamp, item, match);
+					if (targetId != null) {
+						final action:Action = {id: Damage, duration: defaultDuration(Damage)};
+						damageStats(action, item);
+						add(timelines, lastTimes, targetId, action, timestamp, item, match);
+					}
 				case Death:
 					final id = actorId ?? targetId;
 					if (id != null)
 						add(timelines, lastTimes, id, {id: Death, duration: duration}, timestamp, item, match);
-				case Spawn | Damage | Idle:
+				case Damage:
+					final id = targetId ?? actorId;
+					if (id != null) {
+						final action:Action = {id: Damage, duration: duration};
+						damageStats(action, item);
+						add(timelines, lastTimes, id, action, timestamp, item, match);
+					}
+				case Spawn | Idle:
 			}
 		}
 
@@ -113,6 +123,20 @@ class BattleEvents {
 		}
 	}
 
+	static function damageStats(action:Action, raw:Dynamic):Void {
+		final health = Value.int(raw, ["target_hp", "target_health", "target_remaining_hp", "target_hp_after", "remaining_hp", "hp_after", "new_hp"]);
+		if (health != null)
+			action.health = health;
+
+		final maxHealth = Value.int(raw, ["target_max_hp", "target_max_health", "max_hp"]);
+		if (maxHealth != null)
+			action.maxHealth = maxHealth;
+
+		final damage = Value.int(raw, ["damage", "damage_amount", "amount"]);
+		if (damage != null)
+			action.damage = damage;
+	}
+
 	static function time(raw:Dynamic):Null<Float>
 		return Value.float(raw, ["time"]);
 
@@ -127,6 +151,7 @@ class BattleEvents {
 		return switch value.toLowerCase() {
 			case "movement": Walk;
 			case "attack": Attack;
+			case "damage": Damage;
 			case "death": Death;
 			default: Idle;
 		}

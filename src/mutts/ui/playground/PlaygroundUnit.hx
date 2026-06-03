@@ -6,6 +6,7 @@ import s.Animation;
 import s.math.SMath;
 import s.app.input.MouseButton;
 import s.ui.elements.Interactive;
+import s.ui.shapes.Rectangle;
 import s.stage2d.Stage;
 import s.stage2d.objects.Sprite;
 import mutts.game.Unit;
@@ -37,6 +38,8 @@ class PlaygroundUnit extends Interactive {
 	var moveAnimation:Animation;
 	var scaleAnimation:Animation;
 	var actionAnimation:Animation;
+	var healthTrack:Rectangle;
+	var healthFill:Rectangle;
 
 	public function new(unit:Unit, stage:Stage, moveUnit:Unit->Int->Int->Bool, commitMove:Unit->Void, sendToBench:Unit->Void, ?minColumn:Int = 0,
 			?maxColumn:Int = Match.columns - 1) {
@@ -90,6 +93,15 @@ class PlaygroundUnit extends Interactive {
 		unit.row = row;
 		unit.column = column;
 		syncFromUnit(true, animate);
+	}
+
+	public function syncStats(source:Unit, syncHealth:Bool = true):Void {
+		if (syncHealth)
+			unit.health = source.health;
+		unit.maxHealth = source.maxHealth;
+		unit.owner = source.owner;
+		unit.location = source.location;
+		updateHealthBar();
 	}
 
 	function updateDragPosition(mx:Int, my:Int, _:Int, _:Int):Void {
@@ -159,6 +171,18 @@ class PlaygroundUnit extends Interactive {
 		sprite.y = spriteCenterY - spriteScale * 0.5;
 	}
 
+	function updateHealthBar():Void {
+		if (healthTrack == null || healthFill == null)
+			return;
+
+		final ownNickname = Game.player?.nickname;
+		final color:Color = unit.owner != null && ownNickname != null && unit.owner != ownNickname ? GameUI.colors.red : GameUI.colors.cyan;
+		final p = unit.maxHealth <= 0 ? 0.0 : Math.max(0.0, Math.min(1.0, unit.health / unit.maxHealth));
+		healthTrack.color = rgba(color.r, color.g, color.b, 0.25);
+		healthFill.color = color;
+		healthFill.width = Math.max(0.0, (healthTrack.width - 2) * p);
+	}
+
 	public function playAction(action:Action, done:Void->Void):Void {
 		actionAnimation?.stop();
 		final from = vec2(spriteCenterX, spriteCenterY);
@@ -166,6 +190,7 @@ class PlaygroundUnit extends Interactive {
 		final scaleFrom = spriteScale;
 		final target = getActionTarget(action);
 		final duration = Math.max(0.01, action.duration);
+		var appliedDamageStats = false;
 
 		if (action.id == Spawn && target != null) {
 			x = target.ui.x;
@@ -200,6 +225,10 @@ class PlaygroundUnit extends Interactive {
 				spriteCenterX = from.x + Math.sin(t * Math.PI) * 0.25 * direction;
 				applySpriteTransform();
 			case Damage:
+				if (!appliedDamageStats) {
+					applyDamageStats(action);
+					appliedDamageStats = true;
+				}
 				final pulse = Math.sin(t * Math.PI);
 				spriteScale = scaleFrom * (1.0 + pulse * 0.08);
 				sprite.tint = s.Color.rgba(1.0, 0.05, 0.05, pulse * 0.75);
@@ -243,6 +272,16 @@ class PlaygroundUnit extends Interactive {
 		}).start();
 	}
 
+	function applyDamageStats(action:Action):Void {
+		if (action.maxHealth != null)
+			unit.maxHealth = action.maxHealth;
+		if (action.health != null)
+			unit.health = action.health;
+		else if (action.damage != null)
+			unit.health = Std.int(Math.max(0, unit.health - action.damage));
+		updateHealthBar();
+	}
+
 	function getActionTarget(action:Action) {
 		if (sprite.stage == null)
 			return null;
@@ -278,6 +317,7 @@ class PlaygroundUnit extends Interactive {
 
 	override function update() {
 		syncFromUnit();
+		updateHealthBar();
 		super.update();
 	}
 
@@ -305,8 +345,20 @@ class PlaygroundUnit extends Interactive {
 				$width = 25;
 			}
 
-			@markup(GameUI.progress(GameUI.colors.green)) {
+			healthTrack = @rectangle {
 				$layout.fillWidth = true;
+				$height = 5;
+				$radius = 50;
+				$softness = 15;
+
+				healthFill = @rectangle {
+					$anchors.left = $parent.left;
+					$anchors.top = $parent.top;
+					$anchors.bottom = $parent.bottom;
+					$margins = 1;
+					$radius = 50;
+					$softness = 2.5;
+				}
 			}
 		}
 	}
