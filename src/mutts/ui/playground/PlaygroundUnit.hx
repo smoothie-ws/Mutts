@@ -104,6 +104,13 @@ class PlaygroundUnit extends Interactive {
 		updateHealthBar();
 	}
 
+	public function syncMeta(source:Unit):Void {
+		unit.maxHealth = source.maxHealth;
+		unit.owner = source.owner;
+		unit.location = source.location;
+		updateHealthBar();
+	}
+
 	function updateDragPosition(mx:Int, my:Int, _:Int, _:Int):Void {
 		if (!dragging || sprite.stage == null)
 			return;

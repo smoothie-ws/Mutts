@@ -117,10 +117,8 @@ class MatchBattlePlayer {
 		final found = find(timeline.id);
 		if (found != null) {
 			final current = match().battleUnit(timeline.id);
-			if (current != null) {
-				final syncHealth = action.id != ActionType.Damage || action.health != null || action.damage == null;
-				found.syncStats(current, syncHealth);
-			}
+			if (current != null)
+				found.syncMeta(current);
 			return found;
 		}
 

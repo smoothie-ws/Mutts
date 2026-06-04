@@ -2,11 +2,19 @@ package mutts.ui.menus;
 
 import mutts.GameState;
 import s.ui.elements.Label;
+import s.ui.elements.Interactive;
 import s.ui.positioners.Column;
 import mutts.net.Types;
 
 class LeagueContent extends MenuContent {
+	static inline var ROW_HEIGHT = 75.0;
+	static inline var ROW_SPACING = 10.0;
+	static inline var SCROLL_STEP = 45.0;
+
+	var statsViewport:Interactive;
 	var globalColumn:Column;
+	var scrollOffset = 0.0;
+	var contentHeight = 0.0;
 
 	public function new() {
 		super("LEAGUE");
@@ -18,11 +26,18 @@ class LeagueContent extends MenuContent {
 
 	@:ui.markup
 	override function markup() {
-		globalColumn = @column {
-			$spacing = 10;
+		statsViewport = @interactive {
+			$clip = true;
+			$propagateMouseEvents = true;
 			$layout.fillWidth = true;
 			$layout.fillHeight = true;
 			$bottom.margin = 100;
+			$onMouseScrolled(delta -> scrollBy(delta * SCROLL_STEP));
+
+			globalColumn = @column {
+				$spacing = ROW_SPACING;
+				$anchors.fillWidth($parent);
+			}
 		}
 
 		@markup(GameUI.button(GameUI.colors.green, "RETURN")) {
@@ -46,15 +61,33 @@ class LeagueContent extends MenuContent {
 	function showUserStatistics(stats:BackendUser):Void
 		GameUI.showStatisticsPopup(stats);
 
+	function scrollBy(delta:Float) {
+		if (statsViewport == null)
+			return;
+
+		final maxOffset = Math.max(0.0, contentHeight - statsViewport.height);
+		scrollOffset = Math.max(0.0, Math.min(scrollOffset + delta, maxOffset));
+		globalColumn.y = -scrollOffset;
+	}
+
+	function updateContentHeight(itemCount:Int) {
+		contentHeight = itemCount <= 0 ? 0.0 : itemCount * ROW_HEIGHT + (itemCount - 1) * ROW_SPACING;
+		globalColumn.height = contentHeight;
+		scrollOffset = 0.0;
+		scrollBy(0.0);
+	}
+
 	@:ui.markup
 	function markupGlobalStats(stats:GlobalStats) {
 		$children.destroy();
+		updateContentHeight(stats.length);
 
 		for (i in 0...stats.length) {
 			var stat = stats[i];
 			@interactive {
 				$cursor = Pointer;
-				$height = 75;
+				$propagateMouseEvents = true;
+				$height = ROW_HEIGHT;
 				$anchors.fillWidth($parent);
 
 				$onMouseClicked(_ -> Game.client.requestUserStatistics(stat));

@@ -5,11 +5,24 @@ class Value {
 		if (raw == null)
 			return null;
 		for (name in names) {
-			final value = Reflect.field(raw, name);
+			final value = path(raw, name);
 			if (value != null)
 				return value;
 		}
 		return null;
+	}
+
+	static function path(raw:Dynamic, name:String):Dynamic {
+		if (raw == null || name == null || name == "")
+			return null;
+
+		var current:Dynamic = raw;
+		for (part in name.split(".")) {
+			if (current == null)
+				return null;
+			current = Reflect.field(current, part);
+		}
+		return current;
 	}
 
 	public static function str(raw:Dynamic, names:Array<String>):Null<String>

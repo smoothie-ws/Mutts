@@ -21,6 +21,10 @@ class BackendState {
 				state.phase = "planning";
 				Value.setInt(state, "round", Value.int(msg, ["round"]));
 				Value.setInt(state, "timer", Value.int(msg, ["time_left", "timer"]));
+				updatePlayerCoins(state.player1, Value.int(msg, ["player1_coins", "player1_balance", "coins_player1", "player1.coins", "state.player1.coins"]));
+				updatePlayerCoins(state.player2, Value.int(msg, ["player2_coins", "player2_balance", "coins_player2", "player2.coins", "state.player2.coins"]));
+				updateHp(state.player1, Value.int(msg, ["player1_hp", "player1.hp", "state.player1.hp"]), Value.int(msg, ["damage_to_player1"]));
+				updateHp(state.player2, Value.int(msg, ["player2_hp", "player2.hp", "state.player2.hp"]), Value.int(msg, ["damage_to_player2"]));
 			case "unit_placed":
 				final unit:BackendUnit = msg.unit;
 				if (unit != null) {
@@ -181,6 +185,11 @@ class BackendState {
 			state.player1.coins = coins;
 		else if (state.player2.username == username)
 			state.player2.coins = coins;
+	}
+
+	static function updatePlayerCoins(player:BackendPlayerState, coins:Null<Int>):Void {
+		if (coins != null)
+			player.coins = coins;
 	}
 
 	static function updateHp(player:BackendPlayerState, hp:Null<Int>, damage:Null<Int>):Void {

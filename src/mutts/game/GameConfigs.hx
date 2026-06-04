@@ -51,7 +51,7 @@ class GameConfigs {
 	static function defaultGameConfig():BackendGameConfig
 		return {
 			initial_hp: 10,
-			initial_coins: 10,
+			initial_coins: 15,
 			new_round_coins: 5,
 			max_units_on_board: 6,
 			max_units_on_bench: 4,

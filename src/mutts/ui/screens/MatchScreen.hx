@@ -1,6 +1,9 @@
 package mutts.ui.screens;
 
+import s.Animation;
+import s.Easing;
 import s.assets.Image;
+import s.ui.Element;
 import s.ui.Alignment;
 import s.ui.elements.ImageElement;
 import s.ui.elements.Label;
@@ -14,6 +17,7 @@ import mutts.game.BattleEvents;
 import mutts.game.Unit;
 import mutts.game.MatchPhase;
 import mutts.game.Match;
+import mutts.net.Value;
 import mutts.ui.playground.PlaygroundUnit;
 import mutts.ui.playground.PlaygroundPlayerCard;
 
@@ -26,12 +30,20 @@ class MatchScreen extends Screen {
 	var timeLabel:Label;
 	var balanceLabel:Label;
 	var blockedOverlay:ImageElement<Image>;
+	var introOverlay:Element;
+	var introLabel:Label;
 
 	var shopLayout:RowLayout;
 	var benchLayout:ColumnLayout;
 	var groundSprites:Array<PlaygroundUnit> = [];
 	var battlePlayer:MatchBattlePlayer;
 	var pendingBuySlot:Null<Int>;
+	var introDismissed:Bool = false;
+	var introCanDismiss:Bool = false;
+	var introAnimation:Animation;
+	var introScaleAnimation:Animation;
+	var hudAnimation:Animation;
+	var destroyed:Bool = false;
 
 	public function new() {
 		Game.client.onGameEvent(onGameEvent);
@@ -42,10 +54,11 @@ class MatchScreen extends Screen {
 		showMenu(false);
 		setTime(Game.match.timer);
 		refreshMatch();
+		syncIntroVisibility(false);
 	}
 
 	public function setRound(round:Int)
-		roundLabel.text = "ROUND " + round;
+		roundLabel.text = "ROUND " + Std.int(Math.max(1, round));
 
 	public function setPhase(phase:MatchPhase) {
 		phaseLabel.text = phase;
@@ -121,6 +134,7 @@ class MatchScreen extends Screen {
 		setPhase(Game.match.phase);
 		setHealth();
 		refreshPlayground();
+		syncIntroVisibility(true);
 	}
 
 	function moveGroundUnit(unit:Unit, row:Int, column:Int):Bool {
@@ -141,29 +155,37 @@ class MatchScreen extends Screen {
 	}
 
 	function finishBattle(playerHealth:Int, opponentHealth:Int) {
+		if (destroyed || Game.match.phase == Preparation)
+			return;
+
 		Game.match.finishServerBattle(playerHealth, opponentHealth);
 		refreshMatch();
-
-		if (Game.match.winner != null)
-			showMatchWinner();
 	}
 
 	function onGameEvent(event:Dynamic) {
+		if (destroyed)
+			return;
+
 		switch event.type {
 			case "game_state":
 				pendingBuySlot = null;
 				Game.match.syncGameState(event.state);
+				if (isStartedGameState(event.state))
+					introCanDismiss = true;
 				setTime(Game.match.timer);
 				refreshMatch();
 			case "planning_phase_start":
-				Game.match.beginServerPlanning(event.round);
-				Game.match.timer = event.time_left;
+				battlePlayer.reset();
+				introCanDismiss = true;
+				Game.match.beginServerPlanning(event);
 				setTime(Game.match.timer);
 				refreshMatch();
 			case "timer_update":
 				if (Game.match.phase == Preparation) {
+					introCanDismiss = true;
 					Game.match.timer = event.time_left;
 					setTime(Game.match.timer);
+					syncIntroVisibility(true);
 				}
 			case "unit_placed":
 				if (isOwnEvent(event)) {
@@ -190,6 +212,7 @@ class MatchScreen extends Screen {
 					refreshPlayground();
 			case "battle_phase_start":
 				battlePlayer.reset();
+				introCanDismiss = true;
 				Game.match.beginServerBattle();
 				Game.match.round = event.round;
 				setTimeText("");
@@ -198,14 +221,14 @@ class MatchScreen extends Screen {
 				if (event.state != null)
 					Game.match.syncGameState(event.state);
 				final battle = BattleEvents.normalize(event, Game.match);
+				Game.match.applyBattlePreview(battle);
 				if (battle.length > 0)
 					battlePlayer.play(battle);
 				else
-					battlePlayer.syncPositions();
+					battlePlayer.syncPositions(false);
 			case "battle_phase_end":
-				final ownHp = Game.match.location == 0 ? event.player1_hp : event.player2_hp;
-				final enemyHp = Game.match.location == 0 ? event.player2_hp : event.player1_hp;
-				battlePlayer.end(ownHp, enemyHp);
+				Game.match.applyBattlePhaseEnd(event);
+				battlePlayer.end(Game.match.playerHealth, Game.match.opponentHealth);
 			case "game_over":
 				Game.match.winner = event.winner == Game.player.nickname ? 0 : event.winner == "draw" ? null : 1;
 				if (event.winner == "draw")
@@ -225,7 +248,7 @@ class MatchScreen extends Screen {
 	}
 
 	function showMatchWinner() {
-		if (Game.match.winner == null)
+		if (destroyed || Game.match.winner == null)
 			return;
 
 		final name = Game.match.winner == 0 ? Game.player.nickname : Game.match.opponent.nickname;
@@ -236,11 +259,102 @@ class MatchScreen extends Screen {
 	}
 
 	function showError(message:String) {
+		if (destroyed)
+			return;
+
 		pendingBuySlot = null;
 		if (Game.match != null)
 			refreshPlayground();
 		GameUI.showPopup(GameUI.colors.red, message, false, () -> {});
 	}
+
+	function syncIntroVisibility(animate:Bool):Void {
+		final active = shouldShowIntro();
+		if (active) {
+			if (introLabel != null)
+				introLabel.text = introText();
+			if (introOverlay != null) {
+				introOverlay.isVisible = true;
+				introOverlay.opacity = 1.0;
+			}
+			if (introLabel != null && introScaleAnimation == null)
+				introScaleAnimation = Animation.mix(1.0, 1.5, 5.0, x -> introLabel.setScale(x)).ease(Easing.OutCubic).start();
+			if (hud != null) {
+				hud.opacity = 0.0;
+				hud.isVisible = false;
+			}
+			if (stage != null)
+				stage.opacity = 0.72;
+			return;
+		}
+
+		if (introDismissed) {
+			if (hud != null && !menu.isVisible) {
+				hud.isVisible = true;
+				hud.opacity = Game.settings.interfaceOpacity;
+			}
+			if (stage != null)
+				stage.opacity = 1.0;
+			if (introOverlay != null)
+				introOverlay.isVisible = false;
+			introScaleAnimation?.stop();
+			introScaleAnimation = null;
+			return;
+		}
+
+		if (hud != null && !menu.isVisible) {
+			hud.isVisible = true;
+			hudAnimation?.stop();
+			if (animate)
+				hudAnimation = Animation.mix(hud.opacity, Game.settings.interfaceOpacity, 0.25, x -> hud.opacity = x).ease(Easing.OutCubic).start();
+			else
+				hud.opacity = Game.settings.interfaceOpacity;
+		}
+
+		if (stage != null) {
+			if (animate)
+				Animation.mix(stage.opacity, 1.0, 0.35, x -> stage.opacity = x).ease(Easing.OutCubic).start();
+			else
+				stage.opacity = 1.0;
+		}
+
+		if (introOverlay != null && introOverlay.isVisible) {
+			introAnimation?.stop();
+			introScaleAnimation?.stop();
+			introScaleAnimation = null;
+			if (animate) {
+				introAnimation = Animation.mix(introOverlay.opacity, 0.0, 0.25, x -> introOverlay.opacity = x)
+					.ease(Easing.OutCubic)
+					.onCompleted(() -> introOverlay.isVisible = false)
+					.start();
+			} else {
+				introOverlay.opacity = 0.0;
+				introOverlay.isVisible = false;
+			}
+		}
+		introDismissed = true;
+	}
+
+	function shouldShowIntro():Bool
+		return !introCanDismiss && !introDismissed && Game.match != null && Game.match.round <= 0;
+
+	function isStartedGameState(state:Dynamic):Bool {
+		if (state == null)
+			return false;
+
+		final phase = Value.str(state, ["phase"]);
+		if (phase != null) {
+			final normalized = phase.toLowerCase();
+			if (normalized != "waiting" && normalized != "pending" && normalized != "created")
+				return true;
+		}
+
+		final timer = Value.int(state, ["timer", "time_left"]);
+		return timer != null && timer > 0;
+	}
+
+	function introText():String
+		return Game.player.nickname + " VS " + Game.match.opponent.nickname;
 
 	@:ui.markup override function markup() {
 		stage = @stage2d {
@@ -264,7 +378,8 @@ class MatchScreen extends Screen {
 
 		hud = @layout {
 			$anchors.fill($parent);
-			$opacity = Game.settings.interfaceOpacity;
+			$opacity = Game.match.round <= 0 ? 0.0 : Game.settings.interfaceOpacity;
+			$isVisible = Game.match.round > 0;
 			$padding = Game.settings.interfacePadding;
 
 			@layout.row {
@@ -308,6 +423,34 @@ class MatchScreen extends Screen {
 			@markup(shopMarkup()) {}
 
 			@markup(benchMarkup()) {}
+		}
+
+		introOverlay = @element {
+			$anchors.fill($parent);
+			$opacity = Game.match.round <= 0 ? 1.0 : 0.0;
+			$isVisible = Game.match.round <= 0;
+
+			@rectangle {
+				$anchors.fill($parent);
+				$color = 0x59000000;
+				$radius = 0;
+			}
+
+			@column {
+				$width = 1400;
+				$height = 180;
+				$anchors.centerIn($parent);
+				$alignment = AlignCenter;
+
+				introLabel = @markup(GameUI.label(White, introText())) {
+					$width = 1400;
+					$height = 100;
+					$font.size = 56;
+					$font.weight = 2500;
+					$elideMode = ElideMiddle;
+					$setScale(1.0);
+				}
+			}
 		}
 	}
 
@@ -375,7 +518,7 @@ class MatchScreen extends Screen {
 					$height = 35;
 					$font.size = 18;
 					$alignment = AlignRightTop;
-					$margins = 10;
+					$margins = 5;
 					$anchors.right = $parent.right;
 					$anchors.top = $parent.top;
 				}
@@ -414,6 +557,14 @@ class MatchScreen extends Screen {
 	}
 
 	override function destroy() {
+		destroyed = true;
+		battlePlayer?.reset();
+		for (sprite in groundSprites)
+			sprite.destroy();
+		groundSprites.resize(0);
+		introAnimation?.stop();
+		introScaleAnimation?.stop();
+		hudAnimation?.stop();
 		Game.client.offGameEvent(onGameEvent);
 		Game.client.offFailed(showError);
 		super.destroy();

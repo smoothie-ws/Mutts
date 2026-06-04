@@ -5,6 +5,8 @@ import s.math.Vec2;
 import s.math.SMath;
 import mutts.game.Unit;
 import mutts.net.Types;
+import mutts.net.Types.MatchBattle;
+import mutts.net.Types.ActionType;
 import mutts.net.Value;
 
 @:allow(mutts.ui.playground.PlaygroundUnit)
@@ -51,6 +53,7 @@ class Match {
 	final availableShop:Array<UnitType> = [];
 	var latestState:BackendGameState;
 	var ownUsername:String;
+	var roundIncomeApplied:Bool = false;
 
 	public final shop:Vector<UnitType> = new Vector(shopCount);
 	public var bench(get, never):Array<Unit>;
@@ -80,6 +83,8 @@ class Match {
 
 		if (state != null)
 			syncGameState(state);
+		else
+			balance = GameConfigs.game.initial_coins + GameConfigs.game.new_round_coins;
 	}
 
 	public function canBuy(i:Int):Bool {
@@ -124,10 +129,39 @@ class Match {
 		phase = Battle;
 	}
 
-	public function beginServerPlanning(round:Int):Void {
-		this.round = round;
+	public function beginServerPlanning(event:Dynamic):Void {
+		final wasPreparation = phase == Preparation;
+		final previousBalance = balance;
+		BackendState.apply(latestState, event);
+		final nextRound = Value.int(event, ["round"]);
+		if (nextRound != null)
+			round = nextRound;
 		phase = Preparation;
 		winner = null;
+		roundIncomeApplied = true;
+		final nextTimer = Value.int(event, ["time_left", "timer"]);
+		if (nextTimer != null)
+			timer = nextTimer;
+		final ownCoins = playerEventValue(event,
+			["player1_coins", "player1_balance", "coins_player1", "player1.coins", "state.player1.coins"],
+			["player2_coins", "player2_balance", "coins_player2", "player2.coins", "state.player2.coins"]);
+		if (ownCoins != null)
+			balance = ownCoins;
+		final ownHp = playerEventValue(event, ["player1_hp", "player1.hp", "state.player1.hp"], ["player2_hp", "player2.hp", "state.player2.hp"]);
+		if (ownHp != null)
+			playerHealth = ownHp;
+		final enemyHp = playerEventValue(event, ["player2_hp", "player2.hp", "state.player2.hp"], ["player1_hp", "player1.hp", "state.player1.hp"]);
+		if (enemyHp != null)
+			opponentHealth = enemyHp;
+
+		if (latestState != null) {
+			syncSummaryFromState(latestState);
+			if (!wasPreparation && balance == previousBalance)
+				applyRoundIncome();
+		} else if (!wasPreparation)
+			applyRoundIncome();
+
+		restoreOwnUnitsHealth();
 	}
 
 	public function finishServerBattle(playerHealth:Int, opponentHealth:Int):Void {
@@ -137,25 +171,36 @@ class Match {
 		winner = playerHealth <= 0 && opponentHealth <= 0 ? null : playerHealth <= 0 ? 1 : opponentHealth <= 0 ? 0 : null;
 	}
 
+	public function applyBattlePhaseEnd(event:Dynamic):Void {
+		BackendState.apply(latestState, event);
+
+		final ownHp = playerEventValue(event, ["player1_hp"], ["player2_hp"]);
+		final enemyHp = playerEventValue(event, ["player2_hp"], ["player1_hp"]);
+		final ownDamage = playerEventValue(event, ["damage_to_player1"], ["damage_to_player2"]);
+		final enemyDamage = playerEventValue(event, ["damage_to_player2"], ["damage_to_player1"]);
+
+		final nextPlayerHealth = ownHp != null ? ownHp : ownDamage != null ? Std.int(Math.max(0, playerHealth - ownDamage)) : latestStateOwnHp();
+		final nextOpponentHealth = enemyHp != null ? enemyHp : enemyDamage != null ? Std.int(Math.max(0, opponentHealth - enemyDamage)) : latestStateEnemyHp();
+
+		finishServerBattle(nextPlayerHealth, nextOpponentHealth);
+	}
+
 	public function syncGameState(state:BackendGameState):Void {
 		latestState = state;
 		round = state.round;
 		timer = state.timer;
 		phase = state.phase == "battle" ? Battle : Preparation;
-
-		final own = location == 0 ? state.player1 : state.player2;
-		final enemy = location == 0 ? state.player2 : state.player1;
-		ownUsername = own.username;
-		balance = own.coins;
-		playerHealth = own.hp;
-		opponentHealth = enemy.hp;
-		winner = state.winner == null || state.winner == "draw" ? null : state.winner == own.username ? 0 : 1;
+		syncSummaryFromState(state);
+		normalizeInitialPlanningBalance();
 
 		groundArea.units.resize(0);
 		benchArea.units.resize(0);
 		for (unit in state.units)
-			if (unit.owner == own.username)
+			if (unit.owner == ownUsername)
 				placeBackendUnit(unit);
+
+		if (phase == Preparation)
+			restoreOwnUnitsHealth();
 	}
 
 	public function applyUnitPlaced(unit:BackendUnit, coins:Null<Int>, ?shopSlot:Int):Void {
@@ -243,6 +288,36 @@ class Match {
 
 	public function battleUnits():Array<Unit>
 		return latestState == null ? ground.copy() : BackendState.battleUnits(latestState, location, ownUsername);
+
+	public function applyBattlePreview(battle:MatchBattle):Void {
+		if (latestState == null || battle == null)
+			return;
+
+		for (timeline in battle) {
+			final unit = BackendState.find(latestState, timeline.id);
+			if (unit == null)
+				continue;
+
+			for (action in timeline.actions) {
+				if (action.maxHealth != null)
+					unit.max_hp = action.maxHealth;
+				if (action.health != null)
+					unit.hp = action.health;
+				else if (action.id == ActionType.Damage && action.damage != null)
+					unit.hp = Std.int(Math.max(0, unit.hp - action.damage));
+
+				if (action.row != null)
+					unit.position_x = action.row;
+				else if (action.x != null)
+					unit.position_x = action.x;
+
+				if (action.column != null)
+					unit.position_y = boardY(action.column);
+				else if (action.y != null)
+					unit.position_y = boardY(Std.int(Math.floor(action.y)));
+			}
+		}
+	}
 
 	function get_bench():Array<Unit>
 		return benchArea.units;
@@ -346,6 +421,57 @@ class Match {
 
 	static function boardColumnOffset():Int
 		return Std.int(Math.max(0, Match.columns - MatchPlayground.columns));
+
+	function syncSummaryFromState(state:BackendGameState):Void {
+		final own = location == 0 ? state.player1 : state.player2;
+		final enemy = location == 0 ? state.player2 : state.player1;
+		ownUsername = own.username;
+		balance = own.coins;
+		playerHealth = own.hp;
+		opponentHealth = enemy.hp;
+		winner = state.phase == "game_over" && state.winner != null && state.winner != "draw" ? state.winner == own.username ? 0 : 1 : null;
+	}
+
+	function playerEventValue(event:Dynamic, player1Fields:Array<String>, player2Fields:Array<String>):Null<Int>
+		return location == 0 ? Value.int(event, player1Fields) : Value.int(event, player2Fields);
+
+	function latestStateOwnHp():Int
+		return latestState == null ? playerHealth : (location == 0 ? latestState.player1.hp : latestState.player2.hp);
+
+	function latestStateEnemyHp():Int
+		return latestState == null ? opponentHealth : (location == 0 ? latestState.player2.hp : latestState.player1.hp);
+
+	function applyRoundIncome():Void {
+		balance += GameConfigs.game.new_round_coins;
+		roundIncomeApplied = true;
+		if (latestState != null) {
+			if (location == 0)
+				latestState.player1.coins = balance;
+			else
+				latestState.player2.coins = balance;
+		}
+	}
+
+	function restoreOwnUnitsHealth():Void {
+		for (unit in groundArea.units)
+			unit.health = unit.maxHealth;
+		for (unit in benchArea.units)
+			unit.health = unit.maxHealth;
+
+		if (latestState == null)
+			return;
+
+		for (unit in latestState.units)
+			if (unit.owner == ownUsername)
+				unit.hp = unit.max_hp;
+	}
+
+	function normalizeInitialPlanningBalance():Void {
+		if (roundIncomeApplied || phase != Preparation || round > 1 || balance != GameConfigs.game.initial_coins)
+			return;
+
+		applyRoundIncome();
+	}
 
 	static function get_maxHealth():Int
 		return GameConfigs.game.initial_hp;

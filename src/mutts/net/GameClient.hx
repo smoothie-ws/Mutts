@@ -40,11 +40,11 @@ class GameClient implements s.shortcut.Shortcut {
 	@:signal public function failed(message:String);
 
 	public function requestConfigs():Void {
-		final unitConfigs:Array<UnitConfig> = api.get("/unit-configs", false, false);
+		final unitConfigs:Array<UnitConfig> = api.get("/configs/unit-configs", false, false);
 		if (unitConfigs != null)
 			GameConfigs.setUnitConfigs(unitConfigs);
 
-		final gameConfig:BackendGameConfig = api.get("/game-config", false, false);
+		final gameConfig:BackendGameConfig = api.get("/configs/game-config", false, false);
 		if (gameConfig != null)
 			GameConfigs.setGameConfig(gameConfig);
 	}
@@ -63,7 +63,7 @@ class GameClient implements s.shortcut.Shortcut {
 
 		api.setTokens(tokens);
 
-		final user:BackendUser = api.get("/auth/me", true, reportError);
+		final user:BackendUser = api.get("/user/statistics", true, reportError);
 		if (user != null) {
 			currentUsername = user.username;
 			auth(profile(user));
