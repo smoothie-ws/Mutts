@@ -66,7 +66,17 @@ class GameUI implements Markup {
 	}
 
 	@:ui.markup
-	public static function popup(color:s.Color, text:String, declinable:Bool, accepted:Void->Void, ?declined:Void->Void) {
+	public static function popup(
+		color:s.Color,
+		text:String,
+		declinable:Bool,
+		accepted:Void->Void,
+		?declined:Void->Void,
+		?declineColor:s.Color,
+		?acceptColor:s.Color
+	) {
+		final noColor = declineColor ?? GameUI.colors.red;
+		final yesColor = acceptColor ?? GameUI.colors.green;
 		var p = @interactive {
 			$anchors.fill($parent);
 
@@ -109,7 +119,7 @@ class GameUI implements Markup {
 							$layout.alignment = AlignCenter;
 
 							if (declinable) {
-								@markup(button(GameUI.colors.red, "NO")) {
+								@markup(button(noColor, "NO")) {
 									$layout.alignment = AlignCenter;
 									$onMouseClicked(_ -> Animation.mix(1.0, 0.0, 0.15, x -> p.opacity = x).onCompleted(() -> {
 										p.destroy();
@@ -118,7 +128,7 @@ class GameUI implements Markup {
 									}).start());
 								}
 
-								@markup(button(GameUI.colors.green, "YES")) {
+								@markup(button(yesColor, "YES")) {
 									$layout.alignment = AlignCenter;
 									$onMouseClicked(_ -> {
 										p.destroy();
@@ -436,9 +446,8 @@ class GameUI implements Markup {
 							$font.bold = true;
 						}
 
-						final names = ["ID", "RATING", "WINS", "LOSSES", "DRAWS"];
+						final names = ["RATING", "WINS", "LOSSES", "DRAWS"];
 						final values = [
-							Std.string(stats.id),
 							Std.string(stats.rating),
 							Std.string(stats.win_count),
 							Std.string(stats.lose_count),
@@ -508,8 +517,16 @@ class GameUI implements Markup {
 		new Sprite("playground");
 	}
 
-	public static function showPopup(color:s.Color, text:String, declinable:Bool, accepted:Void->Void, ?declined:Void->Void)
-		GameUI.popup(scene, color, text, declinable, accepted, declined);
+	public static function showPopup(
+		color:s.Color,
+		text:String,
+		declinable:Bool,
+		accepted:Void->Void,
+		?declined:Void->Void,
+		?declineColor:s.Color,
+		?acceptColor:s.Color
+	)
+		GameUI.popup(scene, color, text, declinable, accepted, declined, declineColor, acceptColor);
 
 	public static function showStatisticsPopup(stats:BackendUser)
 		GameUI.statisticsPopup(scene, stats);

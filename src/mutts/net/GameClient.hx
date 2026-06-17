@@ -2,7 +2,6 @@ package mutts.net;
 
 import haxe.Json;
 import s.Timer;
-import s.net.Http;
 import s.net.ws.WebSocketClient;
 import mutts.game.BackendState;
 import mutts.game.GameConfigs;
@@ -12,17 +11,21 @@ import mutts.net.Types;
 using StringTools;
 
 final WS_ORIGIN = "ws://193.53.40.62:8000";
-final BACKEND_ORIGIN = "http://193.53.40.62:8000";
+final BACKEND_ORIGIN = "https://api.nagiprime.ru";
+final TOKEN_REFRESH_INTERVAL = 30 * 60.0;
+final TOKEN_REFRESH_RETRY_DELAY = 60.0;
 
 @:allow(Game)
 class GameClient implements s.shortcut.Shortcut {
 	final api:BackendApi;
 	var socket:WebSocketClient;
 	var searchTimer:Timer;
+	var tokenRefreshTimer:Timer;
 	var currentUsername:String;
 	var pendingMatch:Match;
 	var didAnnounceMatch:Bool = false;
 	var searchId:Int = 0;
+	var refreshingToken:Bool = false;
 
 	function new()
 		api = new BackendApi(BACKEND_ORIGIN, message -> failed(message));
@@ -62,6 +65,7 @@ class GameClient implements s.shortcut.Shortcut {
 			return false;
 
 		api.setTokens(tokens);
+		scheduleTokenRefresh();
 
 		final user:BackendUser = api.get("/user/statistics", true, reportError);
 		if (user != null) {
@@ -168,6 +172,7 @@ class GameClient implements s.shortcut.Shortcut {
 	public function logout():Void {
 		closeGame();
 		cancelSearch();
+		cancelTokenRefresh();
 		api.clearTokens();
 		currentUsername = null;
 		pendingMatch = null;
@@ -364,6 +369,30 @@ class GameClient implements s.shortcut.Shortcut {
 
 	function scheduleMatchStatusPoll(id:Int)
 		searchTimer = Timer.set(() -> pollMatchStatus(id), 1.0);
+
+	function scheduleTokenRefresh(?delay:Float):Void {
+		cancelTokenRefresh();
+		if (api.hasToken())
+			tokenRefreshTimer = Timer.set(refreshAccessToken, delay ?? TOKEN_REFRESH_INTERVAL);
+	}
+
+	function refreshAccessToken():Void {
+		tokenRefreshTimer = null;
+		if (!api.hasToken() || refreshingToken)
+			return;
+
+		refreshingToken = true;
+		final refreshed = api.refreshTokens(false);
+		refreshingToken = false;
+		if (api.hasToken())
+			scheduleTokenRefresh(refreshed ? TOKEN_REFRESH_INTERVAL : TOKEN_REFRESH_RETRY_DELAY);
+	}
+
+	function cancelTokenRefresh():Void {
+		tokenRefreshTimer?.stop();
+		tokenRefreshTimer = null;
+		refreshingToken = false;
+	}
 
 	function closeSocket() {
 		if (socket == null)

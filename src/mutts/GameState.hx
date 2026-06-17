@@ -65,7 +65,15 @@ class GameState extends FSM {
 		main[league] = () -> GameUI.setScreenMenuContent(LeagueContent);
 
 		main[settings] = () -> GameUI.setScreenMenuContent(SettingsContent);
-		main[exit] = () -> GameUI.showPopup(GameUI.colors.red, "Are you sure?", true, () -> s.App.exit(), () -> goto(main));
+		main[exit] = () -> GameUI.showPopup(
+			GameUI.colors.red,
+			"Are you sure?",
+			true,
+			() -> s.App.exit(),
+			() -> goto(main),
+			GameUI.colors.green,
+			GameUI.colors.red
+		);
 
 		// league states
 		league[main] = () -> GameUI.setScreenMenuContent(MainContent);

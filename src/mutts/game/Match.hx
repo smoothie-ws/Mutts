@@ -95,6 +95,9 @@ class Match {
 	public function canTake(i:Int):Bool
 		return phase == Preparation && i >= 0 && i < bench.length && groundArea.canAccept();
 
+	public function canSell(i:Int):Bool
+		return phase == Preparation && i >= 0 && i < bench.length && bench[i].serverId != null;
+
 	public function take(i:Int):Null<Unit> {
 		if (!canTake(i))
 			return null;
@@ -107,6 +110,7 @@ class Match {
 			benchArea.add(unit);
 			return null;
 		}
+		unit.location = "board";
 		return unit;
 	}
 
@@ -118,8 +122,10 @@ class Match {
 			return false;
 
 		groundArea.remove(unit);
-		if (benchArea.add(unit))
+		if (benchArea.add(unit)) {
+			unit.location = "bench";
 			return true;
+		}
 
 		groundArea.add(unit);
 		return false;
@@ -239,6 +245,7 @@ class Match {
 			groundArea.remove(unit);
 			if (!benchArea.contains(unit))
 				benchArea.units.push(unit);
+			unit.location = "bench";
 			return true;
 		}
 
@@ -248,6 +255,7 @@ class Match {
 		benchArea.remove(unit);
 		if (!groundArea.contains(unit))
 			groundArea.units.push(unit);
+		unit.location = "board";
 		unit.row = x;
 		unit.column = displayBoardColumn(y);
 		return true;

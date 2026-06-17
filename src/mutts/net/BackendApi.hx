@@ -36,6 +36,23 @@ class BackendApi {
 	public function hasToken():Bool
 		return accessToken != null && accessToken != "";
 
+	public function refreshTokens(reportError:Bool = true):Bool {
+		if (refreshToken == null || refreshToken == "") {
+			lastError = "Refresh token is missing.";
+			if (reportError)
+				failed(lastError);
+			return false;
+		}
+
+		final path = "/auth/refresh?refresh_token=" + refreshToken.urlEncode();
+		final tokens:AuthTokens = postEmpty(path, reportError);
+		if (tokens == null || tokens.access_token == null || tokens.access_token == "")
+			return false;
+
+		setTokens(tokens);
+		return true;
+	}
+
 	public function tokenPath(path:String):String
 		return path + (path.indexOf("?") == -1 ? "?" : "&") + "access_token=" + accessToken.urlEncode();
 

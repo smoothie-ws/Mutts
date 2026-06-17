@@ -84,6 +84,7 @@ class PlaygroundUnit extends Interactive {
 		sprite.opacity = 1.0;
 		sprite.tint = White;
 		syncFromUnit(true);
+		updateHealthBar();
 	}
 
 	public function moveTo(row:Int, column:Int, animate:Bool = true):Void {
@@ -353,6 +354,7 @@ class PlaygroundUnit extends Interactive {
 			}
 
 			healthTrack = @rectangle {
+				$width = 90;
 				$layout.fillWidth = true;
 				$height = 5;
 				$radius = 50;

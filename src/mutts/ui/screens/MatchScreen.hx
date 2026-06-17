@@ -81,7 +81,7 @@ class MatchScreen extends Screen {
 	}
 
 	function buyUnit(i:Int) {
-		if (pendingBuySlot != null || !Game.match.canBuy(i))
+		if (Game.match.phase != Preparation || pendingBuySlot != null || !Game.match.canBuy(i))
 			return;
 
 		final unit:Unit = Game.match.shop[i];
@@ -95,11 +95,14 @@ class MatchScreen extends Screen {
 		if (unit != null) {
 			if (unit.serverId != null)
 				Game.client.moveUnit(unit.serverId, unit.row, Game.match.boardY(unit.column), "board");
-			refreshPlayground();
+			refreshRosterChange();
 		}
 	}
 
 	function sellUnit(i:Int) {
+		if (!Game.match.canSell(i))
+			return;
+
 		final unit = i < 0 || i >= Game.match.bench.length ? null : Game.match.bench[i];
 		if (unit?.serverId != null)
 			Game.client.sellUnit(unit.serverId);
@@ -112,14 +115,54 @@ class MatchScreen extends Screen {
 
 		final battle = Game.match.phase == Battle;
 		final units = battle ? Game.match.battleUnits() : Game.match.ground;
-		for (unit in units) {
-			var sprite = battle ? new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {},
-				_ -> {}) : new PlaygroundUnit(unit, stage, moveGroundUnit, commitGroundUnitMove, moveUnitToBench, Game.match.ownBoardMinColumn(),
-					Game.match.ownBoardMaxColumn());
-			stage.addChild(sprite);
-			sprite.place(unit.row, unit.column);
-			groundSprites.push(sprite);
+		for (unit in units)
+			addGroundSprite(unit, battle);
+	}
+
+	function addGroundSprite(unit:Unit, battle:Bool):PlaygroundUnit {
+		final sprite = battle ? new PlaygroundUnit(unit, stage, (_, _, _) -> false, _ -> {},
+			_ -> {}) : new PlaygroundUnit(unit, stage, moveGroundUnit, commitGroundUnitMove, moveUnitToBench, Game.match.ownBoardMinColumn(),
+				Game.match.ownBoardMaxColumn());
+		stage.addChild(sprite);
+		sprite.place(unit.row, unit.column);
+		groundSprites.push(sprite);
+		return sprite;
+	}
+
+	function sameUnit(a:Unit, b:Unit):Bool
+		return a == b || (a.serverId != null && b.serverId != null && Value.sameId(a.serverId, b.serverId));
+
+	function findGroundSprite(unit:Unit):Null<PlaygroundUnit> {
+		for (sprite in groundSprites)
+			if (sameUnit(sprite.unit, unit))
+				return sprite;
+		return null;
+	}
+
+	function syncPreparationGround():Void {
+		if (Game.match.phase != Preparation)
+			return;
+
+		var i = groundSprites.length - 1;
+		while (i >= 0) {
+			final sprite = groundSprites[i];
+			var current:Null<Unit> = null;
+			for (unit in Game.match.ground)
+				if (sameUnit(sprite.unit, unit)) {
+					current = unit;
+					break;
+				}
+
+			if (current == null || current != sprite.unit) {
+				groundSprites.splice(i, 1);
+				sprite.destroy();
+			}
+			i--;
 		}
+
+		for (unit in Game.match.ground)
+			if (findGroundSprite(unit) == null)
+				addGroundSprite(unit, false);
 	}
 
 	function refreshPlayground() {
@@ -127,6 +170,13 @@ class MatchScreen extends Screen {
 		buildShop(shopLayout);
 		buildBench(benchLayout);
 		rebuildGround();
+	}
+
+	function refreshRosterChange() {
+		setBalance(Game.match.balance);
+		buildShop(shopLayout);
+		buildBench(benchLayout);
+		syncPreparationGround();
 	}
 
 	function refreshMatch() {
@@ -150,7 +200,7 @@ class MatchScreen extends Screen {
 		if (Game.match.moveToBench(unit)) {
 			if (unit.serverId != null)
 				Game.client.moveUnit(unit.serverId, Game.match.benchSlot(unit), 0, "bench");
-			refreshPlayground();
+			refreshRosterChange();
 		}
 	}
 
@@ -192,7 +242,7 @@ class MatchScreen extends Screen {
 					final shopSlot = pendingBuySlot;
 					pendingBuySlot = null;
 					Game.match.applyUnitPlaced(event.unit, event.coins_left, shopSlot);
-					refreshPlayground();
+					refreshRosterChange();
 				}
 			case "auto_merge":
 				final merged = event.merged_unit ?? event.unit;
@@ -202,15 +252,16 @@ class MatchScreen extends Screen {
 					final shopSlot = pendingBuySlot;
 					pendingBuySlot = null;
 					Game.match.applyAutoMerge(merged, event.coins_left, sourceIds, shopSlot);
-					refreshPlayground();
+					refreshRosterChange();
 				}
 			case "unit_moved":
 				if (event.player == Game.player.nickname && Game.match.applyUnitMoved(event.unit_id, event.x, event.y, event.location))
-					refreshPlayground();
+					refreshRosterChange();
 			case "unit_sold":
 				if (event.player == Game.player.nickname && Game.match.applyUnitSold(event.unit_id, event.coins_left))
-					refreshPlayground();
+					refreshRosterChange();
 			case "battle_phase_start":
+				pendingBuySlot = null;
 				battlePlayer.reset();
 				introCanDismiss = true;
 				Game.match.beginServerBattle();
@@ -264,7 +315,7 @@ class MatchScreen extends Screen {
 
 		pendingBuySlot = null;
 		if (Game.match != null)
-			refreshPlayground();
+			refreshRosterChange();
 		GameUI.showPopup(GameUI.colors.red, message, false, () -> {});
 	}
 
@@ -489,10 +540,12 @@ class MatchScreen extends Screen {
 		for (i in 0...Game.match.bench.length) {
 			var unit:Unit = Game.match.bench[i];
 			var canTake = Game.match.canTake(i);
+			var canInteract = Game.match.phase == Preparation;
 
 			@markup(GameUI.unitSlot(GameUI.colors.cyan, "")) {
+				$isEnabled = canInteract;
 				$acceptedButtons = MouseButton.Left | MouseButton.Right;
-				$opacity = canTake ? 1.0 : 0.5;
+				$opacity = canInteract && canTake ? 1.0 : 0.5;
 				$onMousePressed(b -> switch (b) {
 					case Left: takeUnit(i);
 					case Right: sellUnit(i);
